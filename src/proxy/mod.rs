@@ -54,8 +54,6 @@ pub fn run(args: BootArgs) -> crate::Result<()> {
     tracing::info!("Concurrent: {}", args.concurrent);
     tracing::info!("Connect timeout: {:?}s", args.connect_timeout);
 
-
-
     #[cfg(target_family = "unix")]
     {
         use nix::sys::resource::{setrlimit, Resource};
@@ -65,11 +63,16 @@ pub fn run(args: BootArgs) -> crate::Result<()> {
     }
 
     let ctx = move |auth: AuthMode| ProxyContext {
+        auth,
         bind: args.bind,
         concurrent: args.concurrent,
-        auth,
         whitelist: args.whitelist,
-        connector: Connector::new(args.cidr, args.fallback, args.connect_timeout),
+        connector: Connector::new(
+            args.cidr,
+            args.cidr_range,
+            args.fallback,
+            args.connect_timeout,
+        ),
     };
 
     tokio::runtime::Builder::new_multi_thread()
