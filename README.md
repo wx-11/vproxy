@@ -21,7 +21,7 @@ An easy and powerful Rust `HTTP`/`Socks5` proxy
 - Service binding `CIDR` address
 - Fallback address when `CIDR` address is unreachable
 - Basic authentication
-- `Session`/`TTL`/`Http2Socks5`/`Whitelist` Extension
+- Multiple proxy extensions
 
 ## Sponsor
 
@@ -167,14 +167,6 @@ $ for i in `seq 1 3`; do curl -x "socks5h://test-ttl-2:test@127.0.0.1:8101" http
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d105
-```
-
-- Http2Socks5 proxy session with username and password
-
-```shell
-vproxy run --bind "127.0.0.1:1080" http -u username -p password
-vproxy run --bind "127.0.0.1:1081" socks5 -u user -p pass
-curl -x "http://username-h2s-127.0.0.1|1081|user|pass:password@127.0.0.1:1080" -s https://api.ip.sb/ip -A Mozilla
 ```
 
 ```shell
