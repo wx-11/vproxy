@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.76-alpine AS builder
+FROM rust:latest AS builder
 
 # Install build dependencies
 RUN apk add --no-cache musl-dev
@@ -22,16 +22,14 @@ RUN mkdir -p /app/lib && \
     xargs -I '{}' cp -v '{}' /app/lib/
 
 # Runtime stage
-FROM scratch
-
-# Set the working directory
-WORKDIR /app
+FROM alpine:3.16
 
 # Copy the built binary from the builder stage
-COPY --from=builder /app/target/release/vproxy /app/vproxy
+COPY --from=builder /app/target/release/vproxy /bin/vproxy
 
-# Copy only the necessary shared libraries
-COPY --from=builder /app/lib /lib
+# Iproute2 and procps are needed for the vproxy to work
+RUN apk add --no-cache iproute2 procps
+RUN echo "net.ipv6.conf.all.disable_ipv6 = 0" >> /etc/sysctl.conf
 
 # Set the entrypoint
-ENTRYPOINT ["/app/vproxy"]
+ENTRYPOINT ["/bin/vproxy"]
