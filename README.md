@@ -31,16 +31,22 @@ If you find this project helpful, please consider sponsoring me to support ongoi
 
 ## Install
 
-- Curl
+- curl
 
-```shell
+```bash
 curl -s -o /tmp/install.sh https://raw.githubusercontent.com/0x676e67/vproxy/main/.github/install.sh && bash /tmp/install.sh
 ```
 
-- Cargo
+- cargo
 
-```shell
+```bash
 cargo install vproxy
+```
+
+- Dokcer
+
+```bash
+docker run --rm -it ghcr.io/0x676e67/vproxy:latest run http
 ```
 
 ## Usage
