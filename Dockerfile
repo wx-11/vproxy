@@ -13,14 +13,6 @@ COPY . .
 # Build the project
 RUN cargo build --release
 
-# Identify and copy only the needed shared libraries
-RUN mkdir -p /app/lib && \
-    ldd /app/target/release/vproxy | \
-    grep "=> /" | \
-    awk '{print $3}' | \
-    sort -u | \
-    xargs -I '{}' cp -v '{}' /app/lib/
-
 # Runtime stage
 FROM alpine:3.16
 
