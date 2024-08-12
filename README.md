@@ -12,16 +12,19 @@
 
 # vproxy
 
-An easy and powerful Rust `HTTP`/`Socks5` proxy
+An fast asynchronous Rust `HTTP`/`Socks5` proxy
 
 ## Features
 
 - IPv4/IPv6 priority
 - Configurable concurrency limits
 - Service binding `CIDR` address
+- Specify a `CIDR` subnet range
 - Fallback address when `CIDR` address is unreachable
 - Basic authentication
 - Multiple proxy extensions
+- `HTTP`/`SOCKS5` proxy
+- SOCKS5 `TCP`/`UDP` proxy
 
 ## Sponsor
 
