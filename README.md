@@ -1,14 +1,9 @@
 [![CI](https://github.com/0x676e67/vproxy/actions/workflows/ci.yml/badge.svg)](https://github.com/0x676e67/vproxy/actions/workflows/ci.yml)
 [![CI](https://github.com/0x676e67/vproxy/actions/workflows/release.yml/badge.svg)](https://github.com/0x676e67/vproxy/actions/workflows/release.yml)
-<a target="_blank" href="https://github.com/0x676e67/vproxy/blob/main/LICENSE">
-<img src="https://img.shields.io/badge/GPL-3.0-blue.svg"/>
-</a>
-<a href="https://github.com/0x676e67/vproxy/releases">
-<img src="https://img.shields.io/github/release/0x676e67/vproxy.svg?style=flat">
-</a>
-</a><a href="https://github.com/0x676e67/vproxy/releases">
-<img src="https://img.shields.io/github/downloads/0x676e67/vproxy/total?style=flat">
-</a>
+![GitHub License](https://img.shields.io/github/license/0x676e67/vproxy)
+![GitHub Release](https://img.shields.io/github/v/release/0x676e67/vproxy)
+[![Crates.io Version](https://img.shields.io/crates/v/vproxy)](https://crates.io/crates/vproxy)
+[![Crates.io Total Downloads](https://img.shields.io/crates/d/vproxy)](https://crates.io/crates/vproxy)
 
 # vproxy
 
@@ -20,9 +15,8 @@ An fast asynchronous Rust `HTTP`/`Socks5` proxy
 - Configurable concurrency limits
 - Service binding `CIDR` address
 - Specify a `CIDR` subnet range
-- Fallback address when `CIDR` address is unreachable
 - Basic authentication
-- Multiple proxy extensions
+- Proxy extensions
 - `HTTP`/`SOCKS5` proxy
 - SOCKS5 `TCP`/`UDP` proxy
 
