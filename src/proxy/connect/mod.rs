@@ -107,19 +107,19 @@ impl Connector {
 
         match (self.cidr, self.fallback) {
             (Some(IpCidr::V4(cidr)), Some(IpAddr::V6(v6))) => {
-                let v4 = self.assign_ipv4_from_extension(&cidr, &extension);
+                let v4 = self.assign_ipv4_from_extension(cidr, &extension);
                 connector.set_local_addresses(v4, v6);
             }
             (Some(IpCidr::V4(cidr)), None) => {
-                let v4 = self.assign_ipv4_from_extension(&cidr, &extension);
+                let v4 = self.assign_ipv4_from_extension(cidr, &extension);
                 connector.set_local_address(Some(v4.into()));
             }
             (Some(IpCidr::V6(cidr)), Some(IpAddr::V4(v4))) => {
-                let v6 = self.assign_ipv6_from_extension(&cidr, &extension);
+                let v6 = self.assign_ipv6_from_extension(cidr, &extension);
                 connector.set_local_addresses(v4, v6);
             }
             (Some(IpCidr::V6(cidr)), None) => {
-                let v6 = self.assign_ipv6_from_extension(&cidr, &extension);
+                let v6 = self.assign_ipv6_from_extension(cidr, &extension);
                 connector.set_local_address(Some(v6.into()));
             }
             (None, Some(ip)) => connector.set_local_address(Some(ip)),
@@ -270,7 +270,7 @@ impl Connector {
                 (Some(cidr), None) => {
                     timeout(
                         self.connect_timeout,
-                        self.try_connect_with_cidr(target_addr, cidr, &extension),
+                        self.try_connect_with_cidr(target_addr, cidr, extension),
                     )
                     .await?
                 }
@@ -281,12 +281,14 @@ impl Connector {
                             target_addr,
                             cidr,
                             fallback,
-                            &extension,
+                            extension,
                         ),
                     )
                     .await?
                 }
-                _ => timeout(self.connect_timeout, TcpStream::connect(target_addr)).await?,
+                (None, None) => {
+                    timeout(self.connect_timeout, TcpStream::connect(target_addr)).await?
+                }
             },
         }
         .and_then(|stream| {
@@ -357,7 +359,7 @@ impl Connector {
         target_addr: SocketAddr,
         fallback: IpAddr,
     ) -> std::io::Result<TcpStream> {
-        let socket = self.create_socket_with_addr(&fallback)?;
+        let socket = self.create_socket_with_addr(fallback)?;
         socket.connect(target_addr).await
     }
 
@@ -427,17 +429,17 @@ impl Connector {
     /// This function returns a `std::io::Result<TcpSocket>`. If the socket is
     /// successfully created and bound, it returns `Ok(socket)`. If there is an
     /// error creating or binding the socket, it returns the error in the `Result`.
-    fn create_socket_with_addr(&self, ip: &IpAddr) -> std::io::Result<TcpSocket> {
+    fn create_socket_with_addr(&self, ip: IpAddr) -> std::io::Result<TcpSocket> {
         match ip {
             IpAddr::V4(_) => {
                 let socket = TcpSocket::new_v4()?;
-                let bind_addr = SocketAddr::new(*ip, 0);
+                let bind_addr = SocketAddr::new(ip, 0);
                 socket.bind(bind_addr)?;
                 Ok(socket)
             }
             IpAddr::V6(_) => {
                 let socket = TcpSocket::new_v6()?;
-                let bind_addr = SocketAddr::new(*ip, 0);
+                let bind_addr = SocketAddr::new(ip, 0);
                 socket.bind(bind_addr)?;
                 Ok(socket)
             }
@@ -476,13 +478,13 @@ impl Connector {
         match cidr {
             IpCidr::V4(cidr) => {
                 let socket = TcpSocket::new_v4()?;
-                let bind = IpAddr::V4(self.assign_ipv4_from_extension(&cidr, &extension));
+                let bind = IpAddr::V4(self.assign_ipv4_from_extension(cidr, extension));
                 socket.bind(SocketAddr::new(bind, 0))?;
                 Ok(socket)
             }
             IpCidr::V6(cidr) => {
                 let socket = TcpSocket::new_v6()?;
-                let bind = IpAddr::V6(self.assign_ipv6_from_extension(&cidr, &extension));
+                let bind = IpAddr::V6(self.assign_ipv6_from_extension(cidr, extension));
                 socket.bind(SocketAddr::new(bind, 0))?;
                 Ok(socket)
             }
@@ -495,7 +497,7 @@ impl Connector {
     /// ID. The network part of the address is preserved, and the host part is
     /// generated from the hash. If the extension is not a Session, the function
     /// generates a random IPv4 address within the CIDR range.
-    fn assign_ipv4_from_extension(&self, cidr: &Ipv4Cidr, extension: &Extension) -> Ipv4Addr {
+    fn assign_ipv4_from_extension(&self, cidr: Ipv4Cidr, extension: &Extension) -> Ipv4Addr {
         if let Some(combined) = self.combined(extension) {
             match extension {
                 Extension::TTL(_) | Extension::Session(_, _) => {
@@ -526,7 +528,7 @@ impl Connector {
     /// ID. The network part of the address is preserved, and the host part is
     /// generated from the hash. If the extension is not a Session, the function
     /// generates a random IPv6 address within the CIDR range.
-    fn assign_ipv6_from_extension(&self, cidr: &Ipv6Cidr, extension: &Extension) -> Ipv6Addr {
+    fn assign_ipv6_from_extension(&self, cidr: Ipv6Cidr, extension: &Extension) -> Ipv6Addr {
         if let Some(combined) = self.combined(extension) {
             match extension {
                 Extension::TTL(_) | Extension::Session(_, _) => {
@@ -623,7 +625,7 @@ fn combine(a: u64, b: u64) -> u128 {
 /// The subnet is defined by the initial IPv4 address and the prefix length.
 /// The network part of the address is preserved, and the host part is randomly
 /// generated.
-fn assign_rand_ipv4(cidr: &Ipv4Cidr) -> Ipv4Addr {
+fn assign_rand_ipv4(cidr: Ipv4Cidr) -> Ipv4Addr {
     let mut ipv4 = u32::from(cidr.first_address());
     let prefix_len = cidr.network_length();
     let rand: u32 = random();
@@ -637,7 +639,7 @@ fn assign_rand_ipv4(cidr: &Ipv4Cidr) -> Ipv4Addr {
 /// The subnet is defined by the initial IPv6 address and the prefix length.
 /// The network part of the address is preserved, and the host part is randomly
 /// generated.
-fn assign_rand_ipv6(cidr: &Ipv6Cidr) -> Ipv6Addr {
+fn assign_rand_ipv6(cidr: Ipv6Cidr) -> Ipv6Addr {
     let mut ipv6 = u128::from(cidr.first_address());
     let prefix_len = cidr.network_length();
     let rand: u128 = random();
@@ -666,7 +668,7 @@ fn assign_rand_ipv6(cidr: &Ipv6Cidr) -> Ipv6Addr {
 /// let ipv4_address = assign_ipv4_with_range(&cidr, range, combined);
 /// println!("Generated IPv4 Address: {}", ipv4_address);
 /// ```
-fn assign_ipv4_with_range(cidr: &Ipv4Cidr, range: u8, combined: u32) -> Ipv4Addr {
+fn assign_ipv4_with_range(cidr: Ipv4Cidr, range: u8, combined: u32) -> Ipv4Addr {
     let base_ip: u32 = u32::from(cidr.first_address());
     let prefix_len = cidr.network_length();
 
@@ -709,7 +711,7 @@ fn assign_ipv4_with_range(cidr: &Ipv4Cidr, range: u8, combined: u32) -> Ipv4Addr
 /// let ipv6_address = assign_ipv6_with_range(&cidr, range, combined);
 /// println!("Generated IPv6 Address: {}", ipv6_address);
 /// ```
-fn assign_ipv6_with_range(cidr: &Ipv6Cidr, range: u8, combined: u128) -> Ipv6Addr {
+fn assign_ipv6_with_range(cidr: Ipv6Cidr, range: u8, combined: u128) -> Ipv6Addr {
     let base_ip: u128 = cidr.first_address().into();
     let prefix_len = cidr.network_length();
 
@@ -747,8 +749,8 @@ mod tests {
             combined += i;
 
             // Generate two IPv4 addresses with the same combined value
-            let ipv4_address1 = assign_ipv4_with_range(&cidr, range, combined);
-            let ipv4_address2 = assign_ipv4_with_range(&cidr, range, combined);
+            let ipv4_address1 = assign_ipv4_with_range(cidr, range, combined);
+            let ipv4_address2 = assign_ipv4_with_range(cidr, range, combined);
 
             println!("IPv4 Address 1: {}", ipv4_address1);
             println!("IPv4 Address 2: {}", ipv4_address2);
@@ -764,8 +766,8 @@ mod tests {
         for i in 0..5 {
             combined += i;
             // Generate two IPv6 addresses with the same combined value
-            let ipv6_address1 = assign_ipv6_with_range(&cidr, range, combined);
-            let ipv6_address2 = assign_ipv6_with_range(&cidr, range, combined);
+            let ipv6_address1 = assign_ipv6_with_range(cidr, range, combined);
+            let ipv6_address2 = assign_ipv6_with_range(cidr, range, combined);
 
             println!("{}", ipv6_address1);
             println!("{}", ipv6_address2)
