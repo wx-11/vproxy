@@ -1,7 +1,5 @@
 [![CI](https://github.com/0x676e67/vproxy/actions/workflows/ci.yml/badge.svg)](https://github.com/0x676e67/vproxy/actions/workflows/ci.yml)
 [![CI](https://github.com/0x676e67/vproxy/actions/workflows/release.yml/badge.svg)](https://github.com/0x676e67/vproxy/actions/workflows/release.yml)
-![GitHub License](https://img.shields.io/github/license/0x676e67/vproxy)
-![GitHub Release](https://img.shields.io/github/v/release/0x676e67/vproxy)
 [![Crates.io Version](https://img.shields.io/crates/v/vproxy)](https://crates.io/crates/vproxy)
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/vproxy)](https://crates.io/crates/vproxy)
 
