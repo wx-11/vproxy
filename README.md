@@ -1,6 +1,6 @@
-[![CI](https://github.com/0x676e67/vproxy/actions/workflows/ci.yml/badge.svg)](https://github.com/0x676e67/vproxy/actions/workflows/ci.yml)
-[![CI](https://github.com/0x676e67/vproxy/actions/workflows/release.yml/badge.svg)](https://github.com/0x676e67/vproxy/actions/workflows/release.yml)
-[![Crates.io Version](https://img.shields.io/crates/v/vproxy)](https://crates.io/crates/vproxy)
+[![Email Badge](https://img.shields.io/badge/Gmail-Contact_Me-green?logo=gmail)](mailto:gngppz@gmail.com)
+[![Crates.io License](https://img.shields.io/crates/l/vproxy)](./LICENSE)
+[![crates.io](https://img.shields.io/crates/v/vproxy.svg)](https://crates.io/crates/vproxy)
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/vproxy)](https://crates.io/crates/vproxy)
 
 # vproxy
