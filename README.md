@@ -16,13 +16,6 @@ An fast asynchronous Rust `HTTP`/`Socks5` proxy
 - Basic authentication
 - Proxy extensions
 - `HTTP`/`SOCKS5` proxy
-- SOCKS5 `TCP`/`UDP` proxy
-
-## Sponsor
-
-If you find this project helpful, please consider sponsoring me to support ongoing development:
-
-**USDT-TRC20**: TCwD8HfHnJ7236Hdj3HF5uZKR2keeWeqZe
 
 ## Manual
 
@@ -81,6 +74,12 @@ If you would like to submit your contribution, please open a [Pull Request](http
 ## Getting help
 
 Your question might already be answered on the [issues](https://github.com/0x676e67/vproxy/issues)
+
+## Sponsor
+
+If you find this project helpful, please consider sponsoring me to support ongoing development:
+
+**USDT-TRC20**: TCwD8HfHnJ7236Hdj3HF5uZKR2keeWeqZe
 
 ## License
 
