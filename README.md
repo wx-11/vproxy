@@ -15,7 +15,6 @@ An fast asynchronous Rust `HTTP`/`Socks5` proxy
 - Specify a `CIDR` subnet range
 - Basic authentication
 - Proxy extensions
-- `HTTP`/`SOCKS5` proxy
 
 ## Manual
 
