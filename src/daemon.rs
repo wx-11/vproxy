@@ -6,15 +6,11 @@ use std::{
     path::Path,
 };
 
-#[cfg(target_family = "unix")]
 const PID_PATH: &str = "/var/run/vproxy.pid";
-#[cfg(target_family = "unix")]
 const DEFAULT_STDOUT_PATH: &str = "/var/run/vproxy.out";
-#[cfg(target_family = "unix")]
 const DEFAULT_STDERR_PATH: &str = "/var/run/vproxy.err";
 
 /// Get the pid of the daemon
-#[cfg(target_family = "unix")]
 fn get_pid() -> Option<String> {
     if let Ok(data) = std::fs::read(PID_PATH) {
         let binding = String::from_utf8(data).expect("pid file is not utf8");
@@ -24,7 +20,6 @@ fn get_pid() -> Option<String> {
 }
 
 /// Check if the current user is root
-#[cfg(target_family = "unix")]
 pub fn check_root() {
     if !nix::unistd::Uid::effective().is_root() {
         println!("You must run this executable with root permissions");
@@ -33,7 +28,6 @@ pub fn check_root() {
 }
 
 /// Start the daemon
-#[cfg(target_family = "unix")]
 pub fn start(args: BootArgs) -> crate::Result<()> {
     if let Some(pid) = get_pid() {
         println!("vproxy is already running with pid: {}", pid);
@@ -76,7 +70,6 @@ pub fn start(args: BootArgs) -> crate::Result<()> {
 }
 
 /// Stop the daemon
-#[cfg(target_family = "unix")]
 pub fn stop() -> crate::Result<()> {
     use nix::{sys::signal, unistd::Pid};
 
@@ -97,14 +90,12 @@ pub fn stop() -> crate::Result<()> {
 }
 
 /// Restart the daemon
-#[cfg(target_family = "unix")]
 pub fn restart(args: BootArgs) -> crate::Result<()> {
     stop()?;
     start(args)
 }
 
 /// Show the status of the daemon
-#[cfg(target_family = "unix")]
 pub fn status() -> crate::Result<()> {
     match get_pid() {
         Some(pid) => {
@@ -132,7 +123,6 @@ pub fn status() -> crate::Result<()> {
 }
 
 /// Show the log of the daemon
-#[cfg(target_family = "unix")]
 pub fn log() -> crate::Result<()> {
     fn read_and_print_file(file_path: &Path, placeholder: &str) -> crate::Result<()> {
         if !file_path.exists() {
