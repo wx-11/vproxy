@@ -5,6 +5,8 @@
 
 # vproxy
 
+> 🚀 Help me work seamlessly with open source sharing by [sponsoring me on GitHub](https://github.com/penumbra-x/.github/blob/main/profile/SPONSOR.md)
+
 An fast asynchronous Rust `HTTP`/`Socks5` proxy
 
 ## Features
