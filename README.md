@@ -5,7 +5,7 @@
 
 # vproxy
 
-> 🚀 Help me work seamlessly with open source sharing by [sponsoring me on GitHub](https://github.com/penumbra-x/.github/blob/main/profile/SPONSOR.md)
+> 🚀 Help me work seamlessly with open source sharing by [sponsoring me on GitHub](https://github.com/0x676e67/0x676e67/blob/main/SPONSOR.md)
 
 An fast asynchronous Rust `HTTP`/`Socks5` proxy
 
@@ -223,12 +223,6 @@ If you would like to submit your contribution, please open a [Pull Request](http
 ## Getting help
 
 Your question might already be answered on the [issues](https://github.com/0x676e67/vproxy/issues)
-
-## Sponsor
-
-If you find this project helpful, please consider sponsoring me to support ongoing development:
-
-**USDT-TRC20**: TCwD8HfHnJ7236Hdj3HF5uZKR2keeWeqZe
 
 ## License
 
