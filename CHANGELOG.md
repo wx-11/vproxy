@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2024-12-10
+
+### 🐛 Bug Fixes
+
+- *(http)* Fix http service verification vulnerability (#89)
+
 ## [1.2.6] - 2024-10-12
 
 ### Deps
