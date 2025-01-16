@@ -4,16 +4,15 @@ mod http;
 mod murmur;
 #[cfg(target_os = "linux")]
 mod route;
-mod socks5;
+mod socks;
 
-use self::connect::Connector;
-use crate::{AuthMode, BootArgs, Proxy};
-pub use socks5::Error;
+use crate::{AuthMode, BootArgs, Proxy, Result};
+use connect::Connector;
 use std::net::SocketAddr;
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
-struct ProxyContext {
+struct Context {
     /// Bind address
     pub bind: SocketAddr,
     /// Number of concurrent connections
@@ -24,7 +23,7 @@ struct ProxyContext {
     pub connector: Connector,
 }
 
-pub fn run(args: BootArgs) -> crate::Result<()> {
+pub fn run(args: BootArgs) -> Result<()> {
     // Initialize the logger with a filter that ignores WARN level logs for netlink_proto
     let filter = EnvFilter::from_default_env()
         .add_directive(
@@ -63,7 +62,7 @@ pub fn run(args: BootArgs) -> crate::Result<()> {
         }
     }
 
-    let ctx = move |auth: AuthMode| ProxyContext {
+    let ctx = move |auth: AuthMode| Context {
         auth,
         bind: args.bind,
         concurrent: args.concurrent,
@@ -86,8 +85,13 @@ pub fn run(args: BootArgs) -> crate::Result<()> {
                 route::sysctl_route_add_cidr(&cidr).await;
             }
             match args.proxy {
-                Proxy::Http { auth } => http::proxy(ctx(auth)).await,
-                Proxy::Socks5 { auth } => socks5::proxy(ctx(auth)).await,
+                Proxy::Http { auth } => http::http_proxy(ctx(auth)).await,
+                Proxy::Https {
+                    auth,
+                    tls_cert,
+                    tls_key,
+                } => http::https_proxy(ctx(auth), tls_cert, tls_key).await,
+                Proxy::Socks5 { auth } => socks::proxy(ctx(auth)).await,
             }
         })
 }
