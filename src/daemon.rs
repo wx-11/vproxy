@@ -46,7 +46,7 @@ pub fn start(args: BootArgs) -> crate::Result<()> {
     stdout.set_permissions(Permissions::from_mode(0o755))?;
 
     let mut daemonize = Daemonize::new()
-        .pid_file(&*PID_PATH) // Every method except `new` and `start`
+        .pid_file(PID_PATH) // Every method except `new` and `start`
         .chown_pid_file(true) // is optional, see `Daemonize` documentation
         .umask(0o777) // Set umask, `0o027` by default.
         .stdout(stdout) // Redirect stdout to `/tmp/daemon.out`.
