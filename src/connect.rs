@@ -1,5 +1,3 @@
-mod ttl;
-
 use super::{extension::Extension, http::error::Error};
 use cidr::{IpCidr, Ipv4Cidr, Ipv6Cidr};
 use http::{Request, Response};
@@ -9,6 +7,7 @@ use hyper_util::{
     rt::TokioExecutor,
 };
 use rand::random;
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::{
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     time::Duration,
@@ -34,7 +33,7 @@ pub struct Connector {
     /// Default http connector
     http_connector: HttpConnector,
     /// TTL Calculator
-    ttl: ttl::TTLCalculator,
+    ttl: TTLCalculator,
 }
 
 impl Connector {
@@ -55,7 +54,7 @@ impl Connector {
             fallback,
             connect_timeout,
             http_connector,
-            ttl: ttl::TTLCalculator,
+            ttl: TTLCalculator,
         }
     }
 
@@ -732,6 +731,26 @@ fn assign_ipv6_with_range(cidr: Ipv6Cidr, range: u8, combined: u128) -> Ipv6Addr
     Ipv6Addr::from(subnet_with_fixed | host_part)
 }
 
+#[derive(Clone)]
+pub struct TTLCalculator;
+
+impl TTLCalculator {
+    pub fn ttl_boundary(&self, ttl: u64) -> u64 {
+        let start = SystemTime::now();
+        let timestamp = start
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(rand::random());
+
+        let time = self.calculate_ttl_boundary(timestamp, ttl);
+        fxhash::hash64(&time.to_be_bytes())
+    }
+
+    fn calculate_ttl_boundary(&self, timestamp: u64, ttl: u64) -> u64 {
+        timestamp - (timestamp % ttl)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -781,5 +800,16 @@ mod tests {
             ipv6_address,
             std::net::Ipv6Addr::from([0x2001, 0x470, 0xe953, 0, 0, 0, 1, 0x2345])
         );
+    }
+
+    #[test]
+    fn test_get_current_stable_value_with_different_ttl() {
+        let calculator = TTLCalculator;
+
+        for _ in 0..10 {
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            let result = calculator.ttl_boundary(2);
+            println!("Result: {}", result);
+        }
     }
 }
