@@ -304,9 +304,7 @@ pub(super) mod auth {
     impl Authenticator {
         pub async fn authenticate(&self, headers: &HeaderMap) -> Result<Extension, Error> {
             match self {
-                Authenticator::None => Extension::try_from_headers(headers)
-                    .await
-                    .map_err(|_| Error::Forbidden),
+                Authenticator::None => Ok(Extension::default()),
                 Authenticator::Password {
                     username, password, ..
                 } => {
@@ -325,7 +323,7 @@ pub(super) mod auth {
 
                     // Check credentials
                     if is_equal {
-                        let extensions = Extension::try_from((username, auth_username))
+                        let extensions = Extension::try_from(username, auth_username)
                             .await
                             .map_err(|_| Error::Forbidden)?;
                         Ok(extensions)

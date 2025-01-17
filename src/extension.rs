@@ -1,4 +1,3 @@
-use http::{header, HeaderMap};
 use tokio::task::JoinError;
 
 /// Enum representing different types of extensions.
@@ -21,23 +20,13 @@ impl Extension {
     const TAG_SESSION: &'static str = "-session-";
     const TAG_RANGE_SESSION: &'static str = "-range-";
 
-    const HEADER_TTL: &'static str = "ttl";
-    const HEADER_RANGE: &'static str = "range";
-    const HEADER_SESSION_ID: &'static str = "session";
-
-    pub async fn try_from_headers(headers: &HeaderMap) -> Result<Extension, JoinError> {
-        let headers = headers.clone();
-        let extension = tokio::task::spawn_blocking(move || Extension::from(&headers)).await?;
-        Ok(extension)
-    }
-
-    pub async fn try_from((prefix, full): (&str, &str)) -> Result<Extension, JoinError> {
+    pub async fn try_from<O>(prefix: &str, full: O) -> Result<Extension, JoinError>
+    where
+        O: Into<String>,
+    {
+        let full = full.into();
         let prefix = prefix.to_owned();
-        let full = full.to_owned();
-        let extension =
-            tokio::task::spawn_blocking(move || Extension::from((prefix.as_str(), full.as_str())))
-                .await?;
-        Ok(extension)
+        tokio::task::spawn_blocking(move || Extension::from((prefix.as_str(), full.as_str()))).await
     }
 }
 
@@ -47,13 +36,6 @@ impl From<(&str, &str)> for Extension {
     fn from((prefix, full): (&str, &str)) -> Self {
         // If it does, remove the prefix from `s`.
         if let Some(tag) = full.strip_prefix(prefix) {
-            // Parse range extension
-            if let Some(extension) =
-                handle_extension(true, tag, Self::TAG_RANGE_SESSION, parse_range_extension)
-            {
-                return extension;
-            }
-
             // Parse session extension
             if let Some(extension) =
                 handle_extension(false, full, Self::TAG_SESSION, parse_session_extension)
@@ -66,70 +48,17 @@ impl From<(&str, &str)> for Extension {
             {
                 return extension;
             }
+
+            // Parse range extension
+            if let Some(extension) =
+                handle_extension(true, tag, Self::TAG_RANGE_SESSION, parse_range_extension)
+            {
+                return extension;
+            }
         }
         // If the string `s` does not start with the prefix, or if the remaining string
         // after removing the prefix and "-" is empty, return the `None` variant
         // of `Extensions`.
-        Extension::None
-    }
-}
-
-impl From<&HeaderMap> for Extension {
-    fn from(headers: &HeaderMap) -> Self {
-        // Get the value of the `range=id` header from the headers.
-        if let (Some(value), ident) = (
-            headers.get(Self::HEADER_RANGE),
-            headers.get(header::PROXY_AUTHORIZATION),
-        ) {
-            // Convert the value to a string.
-            let ident = ident.and_then(|v| v.to_str().ok());
-            // Return it wrapped in the `Session` variant of `Extensions`.
-            match (value.to_str(), ident) {
-                (Ok(s), Some(ident)) => {
-                    let extensions = parse_range_extension(format!("{s}{ident}").as_str());
-                    return extensions;
-                }
-                (Ok(s), None) => {
-                    let extensions = parse_range_extension(s);
-                    return extensions;
-                }
-                _ => {}
-            }
-        }
-
-        // Get the value of the `session=id` header from the headers.
-        if let (Some(value), ident) = (
-            headers.get(Self::HEADER_SESSION_ID),
-            headers.get(header::PROXY_AUTHORIZATION),
-        ) {
-            // Convert the value to a string.
-            let ident = ident.and_then(|v| v.to_str().ok());
-            // Return it wrapped in the `Session` variant of `Extensions`.
-            match (value.to_str(), ident) {
-                (Ok(s), Some(ident)) => {
-                    let extensions = parse_session_extension(format!("{s}{ident}").as_str());
-                    return extensions;
-                }
-                (Ok(s), None) => {
-                    let extensions = parse_session_extension(s);
-                    return extensions;
-                }
-                _ => {}
-            }
-        }
-
-        // Get the value of the `ttl` header from the headers.
-        if let Some(value) = headers.get(Self::HEADER_TTL) {
-            // Convert the value to a string.
-            if let Ok(s) = value.to_str() {
-                // Parse TTL extension
-                let extensions = parse_ttl_extension(s);
-                return extensions;
-            }
-        }
-
-        // If the `session-id` header is not present, or if the value is not a valid
-        // string, return the `None` variant of `Extensions`.
         Extension::None
     }
 }

@@ -95,10 +95,9 @@ impl Auth for PasswordAuth {
         let resp = Response::new(if is_equal { Succeeded } else { Failed });
         resp.write_to_async_stream(stream).await?;
         if is_equal {
-            let extension =
-                Extension::try_from((&self.user_pass.username, &req.user_pass.username))
-                    .await
-                    .map_err(|_| Error::new(ErrorKind::Other, "failed to parse extension"))?;
+            let extension = Extension::try_from(&self.user_pass.username, req.user_pass.username)
+                .await
+                .map_err(|_| Error::new(ErrorKind::Other, "failed to parse extension"))?;
 
             Ok((true, extension))
         } else {
