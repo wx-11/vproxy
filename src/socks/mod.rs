@@ -9,8 +9,7 @@ use self::{
         ClientConnection, IncomingConnection, Server, UdpAssociate,
     },
 };
-use super::Context;
-use crate::proxy::connect::Connector;
+use crate::{connect::Connector, serve::Context};
 use error::Error;
 use server::AuthAdaptor;
 use std::{

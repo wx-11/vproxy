@@ -2,8 +2,8 @@ pub mod future;
 
 use self::future::RustlsAcceptorFuture;
 use crate::{
-    proxy::http::accept::{Accept, DefaultAcceptor},
-    proxy::http::server::io_other,
+    http::accept::{Accept, DefaultAcceptor},
+    http::server::io_other,
 };
 use rustls_pemfile::Item;
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};

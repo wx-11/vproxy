@@ -1,4 +1,4 @@
-use crate::{proxy, BootArgs};
+use crate::{serve, BootArgs};
 use daemonize::Daemonize;
 use std::{
     fs::{File, Permissions},
@@ -66,7 +66,7 @@ pub fn start(args: BootArgs) -> crate::Result<()> {
         std::process::exit(-1)
     }
 
-    proxy::run(args)
+    serve::run(args)
 }
 
 /// Stop the daemon

@@ -2,8 +2,9 @@ use auth::Authenticator;
 
 use super::accept::Accept;
 use super::error::Error;
-use crate::proxy::http::accept::DefaultAcceptor;
-use crate::proxy::{connect::Connector, extension::Extension, Context};
+use crate::http::accept::DefaultAcceptor;
+use crate::serve::Context;
+use crate::{connect::Connector, extension::Extension};
 use bytes::Bytes;
 use http::StatusCode;
 use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
@@ -267,7 +268,7 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
 
 pub(super) mod auth {
     use super::{empty, Error};
-    use crate::proxy::extension::Extension;
+    use crate::extension::Extension;
     use base64::Engine;
     use bytes::Bytes;
     use http::{header, HeaderMap, Response, StatusCode};

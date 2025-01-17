@@ -1,7 +1,7 @@
 use self_update::cargo_crate_version;
 use self_update::update::UpdateStatus;
 
-pub(super) fn update() -> Result<(), Box<dyn std::error::Error>> {
+pub(super) fn update() -> crate::Result<()> {
     let status = self_update::backends::github::Update::configure()
         .repo_owner("0x676e67")
         .repo_name("vproxy")

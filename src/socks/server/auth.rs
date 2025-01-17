@@ -1,4 +1,4 @@
-use crate::proxy::{
+use crate::{
     extension::Extension,
     socks::proto::{handshake::password, AsyncStreamOperation, Method, UsernamePassword},
 };

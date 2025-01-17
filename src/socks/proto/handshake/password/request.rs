@@ -1,4 +1,4 @@
-use crate::proxy::socks::proto::{AsyncStreamOperation, StreamOperation, UsernamePassword};
+use crate::socks::proto::{AsyncStreamOperation, StreamOperation, UsernamePassword};
 use tokio::io::{AsyncRead, AsyncReadExt};
 
 /// SOCKS5 password handshake request

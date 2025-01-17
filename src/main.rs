@@ -1,8 +1,13 @@
 pub mod alloc;
+mod connect;
 #[cfg(target_family = "unix")]
 mod daemon;
-pub mod error;
-mod proxy;
+mod error;
+mod extension;
+mod http;
+mod murmur;
+mod serve;
+mod socks;
 mod update;
 
 use clap::{Args, Parser, Subcommand};
@@ -94,7 +99,7 @@ pub enum Proxy {
 #[derive(Args, Clone)]
 pub struct BootArgs {
     /// Log level e.g. trace, debug, info, warn, error
-    #[clap(long, env = "VPROXY_LOG", default_value = "info")]
+    #[clap(long, env = "VPROXY_", default_value = "info")]
     log: tracing::Level,
 
     /// Bind address
@@ -125,23 +130,20 @@ pub struct BootArgs {
     proxy: Proxy,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let opt = Opt::parse();
-
     match opt.commands {
-        Commands::Run(args) => proxy::run(args)?,
+        Commands::Run(args) => serve::run(args),
         #[cfg(target_family = "unix")]
-        Commands::Start(args) => daemon::start(args)?,
+        Commands::Start(args) => daemon::start(args),
         #[cfg(target_family = "unix")]
-        Commands::Restart(args) => daemon::restart(args)?,
+        Commands::Restart(args) => daemon::restart(args),
         #[cfg(target_family = "unix")]
-        Commands::Stop => daemon::stop()?,
+        Commands::Stop => daemon::stop(),
         #[cfg(target_family = "unix")]
-        Commands::PS => daemon::status()?,
+        Commands::PS => daemon::status(),
         #[cfg(target_family = "unix")]
-        Commands::Log => daemon::log()?,
-        Commands::Update => update::update()?,
-    };
-
-    Ok(())
+        Commands::Log => daemon::log(),
+        Commands::Update => update::update(),
+    }
 }

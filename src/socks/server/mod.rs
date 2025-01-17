@@ -4,7 +4,7 @@ use tokio::net::TcpListener;
 pub mod auth;
 pub mod connection;
 
-pub use crate::proxy::socks::server::{
+pub use crate::socks::server::{
     auth::AuthAdaptor,
     connection::{associate::UdpAssociate, ClientConnection, IncomingConnection},
 };

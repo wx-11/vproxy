@@ -1,29 +1,72 @@
-use self::{associate::UdpAssociate, bind::Bind, connect::Connect};
-use super::{super::error::Error, auth::Auth};
-use crate::proxy::socks::{
-    proto::{self, handshake, Address, AsyncStreamOperation, Command, Method},
-    server::AuthAdaptor,
+use crate::socks::proto::{Address, AsyncStreamOperation, Reply, Response};
+use std::{
+    marker::PhantomData,
+    net::SocketAddr,
+    pin::Pin,
+    task::{Context, Poll},
+    time::Duration,
 };
-use std::{net::SocketAddr, sync::Arc, time::Duration};
-use tokio::{io::AsyncWriteExt, net::TcpStream};
+use tokio::{
+    io::{AsyncRead, AsyncWrite, AsyncWriteExt, ReadBuf},
+    net::{
+        tcp::{ReadHalf, WriteHalf},
+        TcpStream,
+    },
+};
 
-pub mod associate;
-pub mod bind;
-pub mod connect;
-
-/// An incoming connection. This may not be a valid socks5 connection. You need
-/// to call [`handshake()`](#method.handshake) to perform the socks5 handshake.
-/// It will be converted to a proper socks5 connection after the handshake
-/// succeeds.
-pub struct IncomingConnection {
+/// Socks5 command type `Bind`
+/// you may get a `Bind<NeedFirstReply>`. After replying the client 2 times
+/// you will get a `Bind<Ready>`, which can be used as a regular async TCP
+/// stream.
+///
+/// A `Bind<S>` can be converted to a regular tokio [`TcpStream`](https://docs.rs/tokio/latest/tokio/net/struct.TcpStream.html) by using the `From` trait.
+#[derive(Debug)]
+pub struct Bind<S> {
     stream: TcpStream,
-    auth: Arc<AuthAdaptor>,
+    _state: PhantomData<S>,
 }
 
-impl IncomingConnection {
+/// Marker type indicating that the connection needs its first reply.
+#[derive(Debug, Default)]
+pub struct NeedFirstReply;
+
+/// Marker type indicating that the connection needs its second reply.
+#[derive(Debug, Default)]
+pub struct NeedSecondReply;
+
+/// Marker type indicating that the connection is ready to use as a regular TCP
+/// stream.
+#[derive(Debug, Default)]
+pub struct Ready;
+
+impl Bind<NeedFirstReply> {
     #[inline]
-    pub(crate) fn new(stream: TcpStream, auth: Arc<AuthAdaptor>) -> Self {
-        IncomingConnection { stream, auth }
+    pub(super) fn new(stream: TcpStream) -> Self {
+        Self {
+            stream,
+            _state: PhantomData,
+        }
+    }
+
+    /// Reply to the SOCKS5 client with the given reply and address.
+    ///
+    /// If encountered an error while writing the reply, the error alongside the
+    /// original `TcpStream` is returned.
+    pub async fn reply(
+        mut self,
+        reply: Reply,
+        addr: Address,
+    ) -> std::io::Result<Bind<NeedSecondReply>> {
+        let resp = Response::new(reply, addr);
+        resp.write_to_async_stream(&mut self.stream).await?;
+        Ok(Bind::<NeedSecondReply>::new(self.stream))
+    }
+
+    /// Causes the other peer to receive a read of length 0, indicating that no
+    /// more data will be sent. This only closes the stream in one direction.
+    #[inline]
+    pub async fn shutdown(&mut self) -> std::io::Result<()> {
+        self.stream.shutdown().await
     }
 
     /// Returns the local address that this stream is bound to.
@@ -36,12 +79,6 @@ impl IncomingConnection {
     #[inline]
     pub fn peer_addr(&self) -> std::io::Result<SocketAddr> {
         self.stream.peer_addr()
-    }
-
-    /// Shutdown the TCP stream.
-    #[inline]
-    pub async fn shutdown(&mut self) -> std::io::Result<()> {
-        self.stream.shutdown().await
     }
 
     /// Reads the linger duration for this socket by getting the `SO_LINGER`
@@ -95,112 +132,58 @@ impl IncomingConnection {
     pub fn set_ttl(&self, ttl: u32) -> std::io::Result<()> {
         self.stream.set_ttl(ttl)
     }
-
-    /// Perform a SOCKS5 authentication handshake using the given
-    /// Note that this method will not implicitly close the connection even if
-    /// the handshake failed.
-    pub async fn authenticate(
-        mut self,
-    ) -> std::io::Result<(AuthenticatedStream, <AuthAdaptor as Auth>::Output)> {
-        let request = handshake::Request::retrieve_from_async_stream(&mut self.stream).await?;
-        if let Some(method) = self.evaluate_request(&request) {
-            let response = handshake::Response::new(method);
-            response.write_to_async_stream(&mut self.stream).await?;
-            let output = self.auth.execute(&mut self.stream).await;
-            Ok((AuthenticatedStream::new(self.stream), output))
-        } else {
-            let response = handshake::Response::new(Method::NoAcceptableMethods);
-            response.write_to_async_stream(&mut self.stream).await?;
-            let err = "No available handshake method provided by client";
-            Err(std::io::Error::new(std::io::ErrorKind::Unsupported, err))
-        }
-    }
-
-    fn evaluate_request(&self, req: &handshake::Request) -> Option<Method> {
-        let method = self.auth.method();
-        if req.evaluate_method(method) {
-            Some(method)
-        } else {
-            None
-        }
-    }
 }
 
-impl std::fmt::Debug for IncomingConnection {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("IncomingConnection")
-            .field("stream", &self.stream)
-            .finish()
-    }
-}
-
-impl From<IncomingConnection> for TcpStream {
-    #[inline]
-    fn from(conn: IncomingConnection) -> Self {
-        conn.stream
-    }
-}
-
-/// A TCP stream that has been authenticated.
-/// To get the command from the SOCKS5 client, use TcpStream
-pub struct AuthenticatedStream(TcpStream);
-
-impl AuthenticatedStream {
+impl Bind<NeedSecondReply> {
     #[inline]
     fn new(stream: TcpStream) -> Self {
-        Self(stream)
+        Self {
+            stream,
+            _state: PhantomData,
+        }
     }
 
-    /// Waits the SOCKS5 client to send a request.
+    /// Reply to the SOCKS5 client with the given reply and address.
     ///
-    /// When encountering an error, the stream will be returned alongside the
-    /// error.
-    ///
-    /// Note that this method will not implicitly close the connection even if
-    /// the client sends an invalid request.
-    pub async fn wait_request(mut self) -> Result<ClientConnection, Error> {
-        let req = proto::Request::retrieve_from_async_stream(&mut self.0).await?;
+    /// If encountered an error while writing the reply, the error alongside the
+    /// original `TcpStream` is returned.
+    pub async fn reply(
+        mut self,
+        reply: Reply,
+        addr: Address,
+    ) -> Result<Bind<Ready>, (std::io::Error, TcpStream)> {
+        let resp = Response::new(reply, addr);
 
-        match req.command {
-            Command::UdpAssociate => Ok(ClientConnection::UdpAssociate(
-                UdpAssociate::<associate::NeedReply>::new(self.0),
-                req.address,
-            )),
-            Command::Bind => Ok(ClientConnection::Bind(
-                Bind::<bind::NeedFirstReply>::new(self.0),
-                req.address,
-            )),
-            Command::Connect => Ok(ClientConnection::Connect(
-                Connect::<connect::NeedReply>::new(self.0),
-                req.address,
-            )),
+        if let Err(err) = resp.write_to_async_stream(&mut self.stream).await {
+            return Err((err, self.stream));
         }
+
+        Ok(Bind::<Ready>::new(self.stream))
     }
 
     /// Causes the other peer to receive a read of length 0, indicating that no
     /// more data will be sent. This only closes the stream in one direction.
     #[inline]
     pub async fn shutdown(&mut self) -> std::io::Result<()> {
-        self.0.shutdown().await
+        self.stream.shutdown().await
     }
 
     /// Returns the local address that this stream is bound to.
     #[inline]
     pub fn local_addr(&self) -> std::io::Result<SocketAddr> {
-        self.0.local_addr()
+        self.stream.local_addr()
     }
 
     /// Returns the remote address that this stream is connected to.
     #[inline]
     pub fn peer_addr(&self) -> std::io::Result<SocketAddr> {
-        self.0.peer_addr()
+        self.stream.peer_addr()
     }
 
     /// Reads the linger duration for this socket by getting the `SO_LINGER`
-    /// option.
     #[inline]
     pub fn linger(&self) -> std::io::Result<Option<Duration>> {
-        self.0.linger()
+        self.stream.linger()
     }
 
     /// Sets the linger duration of this socket by setting the `SO_LINGER`
@@ -216,13 +199,13 @@ impl AuthenticatedStream {
     /// quickly as possible.
     #[inline]
     pub fn set_linger(&self, dur: Option<Duration>) -> std::io::Result<()> {
-        self.0.set_linger(dur)
+        self.stream.set_linger(dur)
     }
 
     /// Gets the value of the `TCP_NODELAY` option on this socket.
     #[inline]
     pub fn nodelay(&self) -> std::io::Result<bool> {
-        self.0.nodelay()
+        self.stream.nodelay()
     }
 
     /// Sets the value of the `TCP_NODELAY` option on this socket.
@@ -233,12 +216,12 @@ impl AuthenticatedStream {
     /// sufficient amount to send out, thereby avoiding the frequent sending
     /// of small packets.
     pub fn set_nodelay(&self, nodelay: bool) -> std::io::Result<()> {
-        self.0.set_nodelay(nodelay)
+        self.stream.set_nodelay(nodelay)
     }
 
     /// Gets the value of the `IP_TTL` option for this socket.
     pub fn ttl(&self) -> std::io::Result<u32> {
-        self.0.ttl()
+        self.stream.ttl()
     }
 
     /// Sets the value for the `IP_TTL` option on this socket.
@@ -246,25 +229,77 @@ impl AuthenticatedStream {
     /// This value sets the time-to-live field that is used in every packet sent
     /// from this socket.
     pub fn set_ttl(&self, ttl: u32) -> std::io::Result<()> {
-        self.0.set_ttl(ttl)
+        self.stream.set_ttl(ttl)
     }
 }
 
-impl From<AuthenticatedStream> for TcpStream {
+impl Bind<Ready> {
     #[inline]
-    fn from(conn: AuthenticatedStream) -> Self {
-        conn.0
+    fn new(stream: TcpStream) -> Self {
+        Self {
+            stream,
+            _state: PhantomData,
+        }
+    }
+
+    /// Split the connection into a read and a write half.
+    #[inline]
+    pub fn split(&mut self) -> (ReadHalf, WriteHalf) {
+        self.stream.split()
     }
 }
 
-/// After the socks5 handshake succeeds, the connection may become:
-///
-/// - Associate
-/// - Bind
-/// - Connect
-#[derive(Debug)]
-pub enum ClientConnection {
-    UdpAssociate(UdpAssociate<associate::NeedReply>, Address),
-    Bind(Bind<bind::NeedFirstReply>, Address),
-    Connect(Connect<connect::NeedReply>, Address),
+impl std::ops::Deref for Bind<Ready> {
+    type Target = TcpStream;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.stream
+    }
+}
+
+impl std::ops::DerefMut for Bind<Ready> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.stream
+    }
+}
+
+impl AsyncRead for Bind<Ready> {
+    #[inline]
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.stream).poll_read(cx, buf)
+    }
+}
+
+impl AsyncWrite for Bind<Ready> {
+    #[inline]
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<std::io::Result<usize>> {
+        Pin::new(&mut self.stream).poll_write(cx, buf)
+    }
+
+    #[inline]
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.stream).poll_flush(cx)
+    }
+
+    #[inline]
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.stream).poll_shutdown(cx)
+    }
+}
+
+impl<S> From<Bind<S>> for TcpStream {
+    #[inline]
+    fn from(conn: Bind<S>) -> Self {
+        conn.stream
+    }
 }

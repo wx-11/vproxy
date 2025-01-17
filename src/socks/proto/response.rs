@@ -1,4 +1,4 @@
-use crate::proxy::socks::proto::{Address, AsyncStreamOperation, Reply, StreamOperation, Version};
+use crate::socks::proto::{Address, AsyncStreamOperation, Reply, StreamOperation, Version};
 use tokio::io::{AsyncRead, AsyncReadExt};
 
 /// Response

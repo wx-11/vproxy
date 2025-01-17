@@ -1,4 +1,4 @@
-use crate::proxy::murmur::murmurhash3_x64_128;
+use crate::murmur::murmurhash3_x64_128;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone)]

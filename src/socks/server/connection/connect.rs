@@ -1,4 +1,4 @@
-use crate::proxy::socks::proto::{Address, AsyncStreamOperation, Reply, Response};
+use crate::socks::proto::{Address, AsyncStreamOperation, Reply, Response};
 use std::{
     io::IoSlice,
     net::SocketAddr,

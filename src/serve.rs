@@ -1,17 +1,9 @@
-mod connect;
-mod extension;
-mod http;
-mod murmur;
-#[cfg(target_os = "linux")]
-mod route;
-mod socks;
-
-use crate::{AuthMode, BootArgs, Proxy, Result};
-use connect::Connector;
+use crate::{connect::Connector, AuthMode, BootArgs, Proxy, Result};
+use crate::{http, socks};
 use std::net::SocketAddr;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
-struct Context {
+pub struct Context {
     /// Bind address
     pub bind: SocketAddr,
     /// Number of concurrent connections
