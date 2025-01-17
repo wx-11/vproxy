@@ -145,15 +145,15 @@ while true; do curl -x http://127.0.0.1:8100 -s https://api.ip.sb/ip -A Mozilla;
 
 - TTL Extension
 
-Append `-ttl-` to the username, where TTL is a fixed value (e.g., `username-ttl-2`). The TTL value is the number of requests that can be made with the same IP. When the TTL value is reached, the IP will be changed. For HTTP users who are using passwordless authorization and need a fixed IP address, you can add the `ttl` header to the request (e.g., `ttl: 2`). By keeping the TTL value unchanged, you can use a fixed IP. Keep in mind Chrome and Firefox can't set `--proxy-header` like curl.
+Append `-ttl-` to the username, where TTL is a fixed value (e.g., `username-ttl-2`). The TTL value is the number of requests that can be made with the same IP. When the TTL value is reached, the IP will be changed. For HTTP users who are using passwordless authorization and need a fixed IP address, you can add the `ttl` header to the request (e.g., `ttl: 2`). By keeping the TTL value unchanged, you can use a fixed IP.
 
 - Session Extension
 
-Append `-session-id` to the username, where session is a fixed value and ID is an arbitrary random value (e.g., `username-session-123456`). Keep the Session ID unchanged to use a fixed IP.For HTTP users who are using password-less authorization and need a fixed IP address, you can add the `session` header to the request (e.g., `session: 123456`). By keeping the Session ID unchanged, you can use a fixed IP. Keep in mind Chrome and Firefox can't set `--proxy-header` like curl.
+Append `-session-id` to the username, where session is a fixed value and ID is an arbitrary random value (e.g., `username-session-123456`). Keep the Session ID unchanged to use a fixed IP.For HTTP users who are using password-less authorization and need a fixed IP address, you can add the `session` header to the request (e.g., `session: 123456`).
 
 - Range Extension
 
-Append `-range-id` to the username, where range is a fixed value and ID is any random value (e.g. `username-range-123456`). Keep the Range ID unchanged to use a fixed IP. For HTTP users that use passwordless authorization and require a fixed IP address, you can add a `range` header to the request (e.g. `range: 123456`). By keeping the Range ID unchanged, you can use a fixed CIDR range in a fixed range. Keep in mind that Chrome and Firefox cannot set `--proxy-header` like curl does, in addition, you must set the startup parameter `--cidr-range`, and the length is within a valid range.
+Append `-range-id` to the username, where range is a fixed value and ID is any random value (e.g. `username-range-123456`). Keep the Range ID unchanged to use a fixed IP. For HTTP users that use passwordless authorization and require a fixed IP address, you can add a `range` header to the request (e.g. `range: 123456`). By keeping the Range ID unchanged, you can use a fixed CIDR range in a fixed range. in addition, you must set the startup parameter `--cidr-range`, and the length is within a valid range.
 
 1. Examples
 
@@ -168,22 +168,6 @@ $ for i in `seq 1 10`; do curl -x "http://test-session-123456789:test@127.0.0.1:
 2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
 
 $ for i in `seq 1 10`; do curl -x "http://test-session-987654321:test@127.0.0.1:8101" https://api6.ipify.org; done
-2001:470:70c6:41d0:14fd:d025:835a:d102
-2001:470:70c6:41d0:14fd:d025:835a:d102
-2001:470:70c6:41d0:14fd:d025:835a:d102
-```
-
-- Http proxy session with passwordless authorization:
-
-```shell
-vproxy run --bind 127.0.0.1:8101 -w 127.0.0.1 -i 2001:470:70c6::/48 http
-
-$ for i in `seq 1 3`; do curl --proxy-header "session-id: 123456789" -x "http://159.223.22.161:8101" https://api6.ipify.org; done
-2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
-2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
-2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
-
-for i in `seq 1 3`; do curl --proxy-header "session-id: 987654321" -x "http://159.223.22.161:8101" https://api6.ipify.org; done
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d102

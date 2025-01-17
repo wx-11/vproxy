@@ -27,4 +27,7 @@ pub enum Error {
 
     #[error(transparent)]
     LogParse(#[from] tracing_subscriber::filter::ParseError),
+
+    #[error(transparent)]
+    TaskJoin(#[from] tokio::task::JoinError),
 }
