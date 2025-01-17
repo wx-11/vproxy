@@ -32,9 +32,9 @@ Commands:
   start    Start server daemon
   restart  Restart server daemon
   stop     Stop server daemon
-  ps       Show the server daemon process
-  log      Show the server daemon log
-  update   Update the application
+  ps       Show server daemon process
+  log      Show server daemon log
+  update   Update application
   help     Print this message or the help of the given subcommand(s)
 
 Options:
