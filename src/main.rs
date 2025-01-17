@@ -5,7 +5,8 @@ mod daemon;
 mod error;
 mod extension;
 mod http;
-mod murmur;
+#[cfg(target_os = "linux")]
+mod route;
 mod serve;
 mod socks;
 mod update;
