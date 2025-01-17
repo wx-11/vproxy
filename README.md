@@ -77,7 +77,7 @@ Options:
 
 <summary>If you need more detailed installation and usage information, please check here</summary>
 
-1. Install
+### Install
 
 - curl
 
@@ -97,7 +97,7 @@ cargo install vproxy
 docker run --rm -it ghcr.io/0x676e67/vproxy:latest run http
 ```
 
-2. Note
+### Note
 
 You run the program with sudo, it will automatically configure `sysctl net.ipv6.ip_nonlocal_bind=1` and `ip route add local 2001:470:e953::/48` dev lo for you. If you do not run it with sudo, you will need to configure these manually.
 
@@ -155,7 +155,7 @@ Append `-session-id` to the username, where session is a fixed value and ID is a
 
 Append `-range-id` to the username, where range is a fixed value and ID is any random value (e.g. `username-range-123456`). Keep the Range ID unchanged to use a fixed IP. For HTTP users that use passwordless authorization and require a fixed IP address, you can add a `range` header to the request (e.g. `range: 123456`). By keeping the Range ID unchanged, you can use a fixed CIDR range in a fixed range. in addition, you must set the startup parameter `--cidr-range`, and the length is within a valid range.
 
-1. Examples
+### Examples
 
 - Http proxy session with username and password:
 
