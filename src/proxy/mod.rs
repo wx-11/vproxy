@@ -42,25 +42,13 @@ pub fn run(args: BootArgs) -> Result<()> {
 
     tracing::subscriber::set_global_default(
         FmtSubscriber::builder().with_env_filter(filter).finish(),
-    )
-    .expect("setting default subscriber failed");
+    )?;
 
     tracing::info!("OS: {}", std::env::consts::OS);
     tracing::info!("Arch: {}", std::env::consts::ARCH);
     tracing::info!("Version: {}", env!("CARGO_PKG_VERSION"));
     tracing::info!("Concurrent: {}", args.concurrent);
     tracing::info!("Connect timeout: {:?}s", args.connect_timeout);
-
-    #[cfg(target_family = "unix")]
-    {
-        if args.ulimit {
-            use nix::sys::resource::{setrlimit, Resource};
-            let soft_limit = (args.concurrent * 3) as u64;
-            let hard_limit = 1048576;
-            // Maybe root permission is required
-            setrlimit(Resource::RLIMIT_NOFILE, soft_limit.into(), hard_limit)?;
-        }
-    }
 
     let ctx = move |auth: AuthMode| Context {
         auth,
@@ -82,7 +70,7 @@ pub fn run(args: BootArgs) -> Result<()> {
             #[cfg(target_os = "linux")]
             if let Some(cidr) = &args.cidr {
                 route::sysctl_ipv6_no_local_bind();
-                route::sysctl_route_add_cidr(&cidr).await;
+                route::sysctl_route_add_cidr(cidr).await;
             }
             match args.proxy {
                 Proxy::Http { auth } => http::http_proxy(ctx(auth)).await,
