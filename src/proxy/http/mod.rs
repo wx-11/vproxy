@@ -27,7 +27,7 @@ pub async fn https_proxy(
     tls_cert: Option<PathBuf>,
     tls_key: Option<PathBuf>,
 ) -> crate::Result<()> {
-    tracing::info!("HTTP proxy server listening on {}", ctx.bind);
+    tracing::info!("HTTPS proxy server listening on {}", ctx.bind);
 
     let config = match (tls_cert, tls_key) {
         (Some(cert), Some(key)) => RustlsConfig::from_pem_chain_file(cert, key),
