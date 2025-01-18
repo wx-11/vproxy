@@ -600,6 +600,11 @@ impl TcpConnector<'_> {
     }
 }
 
+/// `UdpConnector` struct is used to create UDP connectors, optionally configured
+/// with an IPv6 CIDR and a fallback IP address.
+///
+/// This struct provides methods to bind UDP sockets to appropriate IP addresses
+/// based on the configuration of the `Connector`.
 pub struct UdpConnector<'a> {
     inner: &'a Connector,
 }

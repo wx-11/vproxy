@@ -226,14 +226,14 @@ impl Handler {
 
         match tokio::io::copy_bidirectional(&mut TokioIo::new(upgraded), &mut server).await {
             Ok((from_client, from_server)) => {
-                tracing::debug!(
+                tracing::info!(
                     "client wrote {} bytes and received {} bytes",
                     from_client,
                     from_server
                 );
             }
             Err(err) => {
-                tracing::debug!("tunnel error: {}", err);
+                tracing::trace!("tunnel error: {}", err);
             }
         }
 

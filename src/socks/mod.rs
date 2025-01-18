@@ -123,7 +123,7 @@ async fn hanlde_connect_proxy(
 
             match tokio::io::copy_bidirectional(&mut target_stream, &mut conn).await {
                 Ok((from_client, from_server)) => {
-                    tracing::trace!(
+                    tracing::info!(
                         "[TCP] client wrote {} bytes and received {} bytes",
                         from_client,
                         from_server
@@ -186,7 +186,7 @@ async fn handle_udp_proxy(
                             return Err("[UDP] packet fragment is not supported".into());
                         }
                         *incoming_addr.write().await = src_addr;
-                        tracing::trace!("[UDP] {src_addr} -> {dst_addr} incoming packet size {}", pkt.len());
+                        tracing::info!("[UDP] {src_addr} -> {dst_addr} incoming packet size {}", pkt.len());
 
                         match dst_addr {
                             Address::SocketAddress(dst_addr) => {
@@ -207,7 +207,7 @@ async fn handle_udp_proxy(
                         let mut buf = vec![0u8; MAX_UDP_RELAY_PACKET_SIZE];
                         let (len, remote_addr) = dispatch_socket.recv_from(&mut buf).await?;
                         let incoming_addr = *incoming_addr.read().await;
-                        tracing::trace!("[UDP] {incoming_addr} <- {remote_addr} feedback to incoming");
+                        tracing::info!("[UDP] {incoming_addr} <- {remote_addr} feedback to incoming");
 
                         listen_udp.send_to(&buf[..len], 0, remote_addr.into(), incoming_addr).await?;
                         Ok::<_, Error>(())
@@ -217,7 +217,7 @@ async fn handle_udp_proxy(
                         }
                     },
                     _ = reply_listener.wait_until_closed() => {
-                        tracing::trace!("[UDP] {} listener closed", listen_addr);
+                        tracing::info!("[UDP] {} listener closed", listen_addr);
                         break Ok::<_, Error>(());
                     },
                 };
