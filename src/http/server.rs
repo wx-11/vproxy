@@ -1,4 +1,5 @@
 use auth::Authenticator;
+use http::uri::Authority;
 use tracing::{instrument, Level};
 
 use super::accept::Accept;
@@ -17,7 +18,7 @@ use hyper_util::{
 };
 use std::{
     io::{self, ErrorKind},
-    net::{SocketAddr, ToSocketAddrs},
+    net::SocketAddr,
     sync::Arc,
     time::Duration,
 };
@@ -133,27 +134,21 @@ pub(super) fn io_other<E: Into<BoxError>>(error: E) -> io::Error {
 
 #[derive(Clone)]
 struct Handler {
-    inner: Arc<InnerHandler>,
-}
-
-struct InnerHandler {
-    authenticator: Authenticator,
+    authenticator: Arc<Authenticator>,
     connector: Connector,
 }
 
 impl From<Context> for Handler {
     fn from(ctx: Context) -> Self {
-        let auth = match (ctx.auth.username, ctx.auth.password) {
+        let authenticator = match (ctx.auth.username, ctx.auth.password) {
             (Some(username), Some(password)) => Authenticator::Password { username, password },
 
             _ => Authenticator::None,
         };
 
         Handler {
-            inner: Arc::new(InnerHandler {
-                authenticator: auth,
-                connector: ctx.connector,
-            }),
+            authenticator: Arc::new(authenticator),
+            connector: ctx.connector,
         }
     }
 }
@@ -166,7 +161,7 @@ impl Handler {
         req: Request<Incoming>,
     ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
         // Check if the client is authorized
-        let extension = match self.inner.authenticator.authenticate(req.headers()).await {
+        let extension = match self.authenticator.authenticate(req.headers()).await {
             Ok(extension) => extension,
             // If the client is not authorized, return an error response
             Err(e) => return Ok(e.try_into()?),
@@ -186,11 +181,11 @@ impl Handler {
             // Note: only after client received an empty body with STATUS_OK can the
             // connection be upgraded, so we can't return a response inside
             // `on_upgrade` future.
-            if let Some(addr) = host_addr(req.uri()) {
+            if let Some(authority) = req.uri().authority().cloned() {
                 tokio::task::spawn(async move {
                     match hyper::upgrade::on(req).await {
                         Ok(upgraded) => {
-                            if let Err(e) = self.tunnel(upgraded, addr, extension).await {
+                            if let Err(e) = self.tunnel(upgraded, authority, extension).await {
                                 tracing::warn!("server io error: {}", e);
                             };
                         }
@@ -207,8 +202,7 @@ impl Handler {
                 Ok(resp)
             }
         } else {
-            self.inner
-                .connector
+            self.connector
                 .http_connector()
                 .send_request(req, extension)
                 .await
@@ -221,15 +215,13 @@ impl Handler {
     async fn tunnel(
         &self,
         upgraded: Upgraded,
-        addr_str: String,
+        authority: Authority,
         extension: Extension,
     ) -> std::io::Result<()> {
         let mut server = {
-            let addrs = addr_str.to_socket_addrs()?;
-            self.inner
-                .connector
+            self.connector
                 .tcp_connector()
-                .connect_with_addrs(addrs, extension)
+                .connect_with_authority(authority, extension)
                 .await?
         };
 
@@ -252,10 +244,6 @@ impl Handler {
     }
 }
 
-fn host_addr(uri: &http::Uri) -> Option<String> {
-    uri.authority().map(|auth| auth.to_string())
-}
-
 fn empty() -> BoxBody<Bytes, hyper::Error> {
     Empty::<Bytes>::new()
         .map_err(|never| match never {})
@@ -268,7 +256,7 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
         .boxed()
 }
 
-pub(super) mod auth {
+mod auth {
     use super::{empty, Error};
     use crate::extension::Extension;
     use base64::Engine;
