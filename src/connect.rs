@@ -31,7 +31,7 @@ pub struct Connector {
     /// Connect timeout in milliseconds.
     connect_timeout: Duration,
     /// Default http connector
-    http_connector: connect::HttpConnector,
+    http: connect::HttpConnector,
 }
 
 impl Connector {
@@ -51,7 +51,7 @@ impl Connector {
             cidr_range,
             fallback,
             connect_timeout,
-            http_connector,
+            http: http_connector,
         }
     }
 
@@ -71,13 +71,9 @@ impl Connector {
     /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
     /// let http_connector = connector.http_connector();
     /// ```
+    #[inline(always)]
     pub fn http_connector(&self) -> HttpConnector {
-        HttpConnector {
-            inner: self.http_connector.clone(),
-            cidr: self.cidr,
-            cidr_range: self.cidr_range,
-            fallback: self.fallback,
-        }
+        HttpConnector { inner: self }
     }
 
     /// Returns a new instance of `TcpConnector` configured with the same settings
@@ -96,13 +92,9 @@ impl Connector {
     /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
     /// let tcp_connector = connector.tcp_connector();
     /// ```
+    #[inline(always)]
     pub fn tcp_connector(&self) -> TcpConnector {
-        TcpConnector {
-            cidr: self.cidr,
-            cidr_range: self.cidr_range,
-            fallback: self.fallback,
-            connect_timeout: self.connect_timeout,
-        }
+        TcpConnector { inner: self }
     }
 }
 
@@ -127,14 +119,11 @@ impl Connector {
 /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
 /// let tcp_connector = connector.tcp_connector();
 /// ```
-pub struct TcpConnector {
-    cidr: Option<IpCidr>,
-    cidr_range: Option<u8>,
-    fallback: Option<IpAddr>,
-    connect_timeout: Duration,
+pub struct TcpConnector<'a> {
+    inner: &'a Connector,
 }
 
-impl TcpConnector {
+impl TcpConnector<'_> {
     /// Attempts to establish a TCP connection to each of the target addresses
     /// in the provided iterator using the provided extensions.
     ///
@@ -256,24 +245,24 @@ impl TcpConnector {
     ) -> std::io::Result<TcpStream> {
         match extension {
             Extension::None | Extension::Range(_) | Extension::Session(_) | Extension::TTL(_) => {
-                match (self.cidr, self.fallback) {
+                match (self.inner.cidr, self.inner.fallback) {
                     (None, Some(fallback)) => {
                         timeout(
-                            self.connect_timeout,
+                            self.inner.connect_timeout,
                             self.try_connect_with_addr(target_addr, fallback),
                         )
                         .await?
                     }
                     (Some(cidr), None) => {
                         timeout(
-                            self.connect_timeout,
+                            self.inner.connect_timeout,
                             self.try_connect_with_cidr(target_addr, cidr, extension),
                         )
                         .await?
                     }
                     (Some(cidr), Some(fallback)) => {
                         timeout(
-                            self.connect_timeout,
+                            self.inner.connect_timeout,
                             self.try_connect_with_cidr_and_fallback(
                                 target_addr,
                                 cidr,
@@ -284,7 +273,7 @@ impl TcpConnector {
                         .await?
                     }
                     (None, None) => {
-                        timeout(self.connect_timeout, TcpStream::connect(target_addr)).await?
+                        timeout(self.inner.connect_timeout, TcpStream::connect(target_addr)).await?
                     }
                 }
             }
@@ -476,13 +465,21 @@ impl TcpConnector {
         match cidr {
             IpCidr::V4(cidr) => {
                 let socket = TcpSocket::new_v4()?;
-                let bind = IpAddr::V4(assign_ipv4_from_extension(cidr, self.cidr_range, extension));
+                let bind = IpAddr::V4(assign_ipv4_from_extension(
+                    cidr,
+                    self.inner.cidr_range,
+                    extension,
+                ));
                 socket.bind(SocketAddr::new(bind, 0))?;
                 Ok(socket)
             }
             IpCidr::V6(cidr) => {
                 let socket = TcpSocket::new_v6()?;
-                let bind = IpAddr::V6(assign_ipv6_from_extension(cidr, self.cidr_range, extension));
+                let bind = IpAddr::V6(assign_ipv6_from_extension(
+                    cidr,
+                    self.inner.cidr_range,
+                    extension,
+                ));
                 socket.bind(SocketAddr::new(bind, 0))?;
                 Ok(socket)
             }
@@ -511,14 +508,11 @@ impl TcpConnector {
 /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
 /// let http_connector = connector.http_connector();
 /// ```
-pub struct HttpConnector {
-    inner: connect::HttpConnector,
-    cidr: Option<IpCidr>,
-    cidr_range: Option<u8>,
-    fallback: Option<IpAddr>,
+pub struct HttpConnector<'a> {
+    inner: &'a Connector,
 }
 
-impl HttpConnector {
+impl HttpConnector<'_> {
     /// Sends an HTTP request using the configured `HttpConnector`.
     ///
     /// This method sets the local addresses based on the provided CIDR and fallback IP address,
@@ -544,22 +538,22 @@ impl HttpConnector {
         req: Request<Incoming>,
         extension: Extension,
     ) -> Result<Response<Incoming>, Error> {
-        let mut connector = self.inner;
-        match (self.cidr, self.fallback) {
+        let mut connector = self.inner.http.clone();
+        match (self.inner.cidr, self.inner.fallback) {
             (Some(IpCidr::V4(cidr)), Some(IpAddr::V6(v6))) => {
-                let v4 = assign_ipv4_from_extension(cidr, self.cidr_range, &extension);
+                let v4 = assign_ipv4_from_extension(cidr, self.inner.cidr_range, &extension);
                 connector.set_local_addresses(v4, v6);
             }
             (Some(IpCidr::V4(cidr)), None) => {
-                let v4 = assign_ipv4_from_extension(cidr, self.cidr_range, &extension);
+                let v4 = assign_ipv4_from_extension(cidr, self.inner.cidr_range, &extension);
                 connector.set_local_address(Some(v4.into()));
             }
             (Some(IpCidr::V6(cidr)), Some(IpAddr::V4(v4))) => {
-                let v6 = assign_ipv6_from_extension(cidr, self.cidr_range, &extension);
+                let v6 = assign_ipv6_from_extension(cidr, self.inner.cidr_range, &extension);
                 connector.set_local_addresses(v4, v6);
             }
             (Some(IpCidr::V6(cidr)), None) => {
-                let v6 = assign_ipv6_from_extension(cidr, self.cidr_range, &extension);
+                let v6 = assign_ipv6_from_extension(cidr, self.inner.cidr_range, &extension);
                 connector.set_local_address(Some(v6.into()));
             }
             (None, addr) => connector.set_local_address(addr),
