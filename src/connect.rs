@@ -605,6 +605,33 @@ pub struct UdpConnector<'a> {
 }
 
 impl UdpConnector<'_> {
+    /// Binds a UDP socket to an IP address based on the provided CIDR, fallback IP, and extensions.
+    ///
+    /// This method determines the appropriate IP address to bind the socket to based on the
+    /// configuration of the `Connector`. It first checks if a CIDR range is provided. If so,
+    /// it assigns an IP address from the CIDR range using the provided extensions. If no CIDR
+    /// range is provided but a fallback IP address is available, it uses the fallback IP address.
+    /// If neither is available, it binds to a default address.
+    ///
+    /// # Arguments
+    ///
+    /// * `extension` - The extensions used to determine the IP address from the CIDR range.
+    ///
+    /// # Returns
+    ///
+    /// A `std::io::Result<UdpSocket>` representing the result of the binding attempt.
+    /// If successful, it returns `Ok(UdpSocket)`. If the binding fails, it returns the
+    /// encountered error.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
+    /// let tcp_connector = TcpConnector { inner: &connector };
+    /// let extension = Extension::default();
+    /// let udp_socket = tcp_connector.bind_socket(extension).await?;
+    /// ```
+    #[inline(always)]
     pub async fn bind_socket(&self, extension: Extension) -> std::io::Result<UdpSocket> {
         match (self.inner.cidr, self.inner.fallback) {
             (None, Some(fallback)) => self.create_socket_with_addr(fallback).await,
@@ -615,6 +642,88 @@ impl UdpConnector<'_> {
             }
             (None, None) => UdpSocket::bind(SocketAddr::from(([0, 0, 0, 0], 0))).await,
         }
+    }
+
+    /// Sends a UDP packet to the specified address using the provided UDP socket.
+    ///
+    /// This method sends a UDP packet to the specified destination address using the provided
+    /// UDP socket.
+    ///
+    /// # Arguments
+    ///
+    /// * `dispatch_socket` - The UDP socket used to send the packet.
+    /// * `pkt` - The packet data to be sent.
+    /// * `dst_addr` - The destination address to send the packet to.
+    ///
+    /// # Returns
+    ///
+    /// A `std::io::Result<()>` representing the result of the send attempt.
+    /// If successful, it returns `Ok(())`. If the send fails, it returns the encountered error.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
+    /// let tcp_connector = TcpConnector { inner: &connector };
+    /// let udp_socket = UdpSocket::bind("0.0.0.0:0").await?;
+    /// let pkt = b"Hello, world!";
+    /// let dst_addr = "127.0.0.1:8080".parse().unwrap();
+    /// tcp_connector.send_packet_with_addr(&udp_socket, pkt, dst_addr).await?;
+    /// ```
+    #[inline(always)]
+    pub async fn send_packet_with_addr(
+        &self,
+        dispatch_socket: &UdpSocket,
+        pkt: &[u8],
+        dst_addr: SocketAddr,
+    ) -> std::io::Result<usize> {
+        dispatch_socket.send_to(pkt, dst_addr).await
+    }
+
+    /// Sends a UDP packet to the specified domain and port using the provided UDP socket.
+    ///
+    /// This method resolves the domain to an IP address and sends a UDP packet to the specified
+    /// destination domain and port using the provided UDP socket.
+    ///
+    /// # Arguments
+    ///
+    /// * `dispatch_socket` - The UDP socket used to send the packet.
+    /// * `pkt` - The packet data to be sent.
+    /// * `dst_domain` - A tuple containing the destination domain and port.
+    ///
+    /// # Returns
+    ///
+    /// A `std::io::Result<()>` representing the result of the send attempt.
+    /// If successful, it returns `Ok(())`. If the send fails, it returns the encountered error.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
+    /// let tcp_connector = TcpConnector { inner: &connector };
+    /// let udp_socket = UdpSocket::bind("0.0.0.0:0").await?;
+    /// let pkt = b"Hello, world!";
+    /// let dst_domain = ("example.com".to_string(), 8080);
+    /// tcp_connector.send_packet_with_domain(&udp_socket, pkt, dst_domain).await?;
+    /// ```
+    pub async fn send_packet_with_domain(
+        &self,
+        dispatch_socket: &UdpSocket,
+        pkt: &[u8],
+        dst_domain: (String, u16),
+    ) -> std::io::Result<usize> {
+        let mut last_err = None;
+        let addrs = lookup_host(dst_domain).await?;
+        for addr in addrs {
+            match self.send_packet_with_addr(dispatch_socket, pkt, addr).await {
+                Ok(s) => return Ok(s),
+                Err(e) => {
+                    last_err = Some(e);
+                }
+            }
+        }
+
+        Err(error(last_err))
     }
 
     /// Creates a UDP socket and binds it to the provided IP address.
@@ -715,7 +824,7 @@ impl UdpConnector<'_> {
         match self.create_socket_with_cidr(cidr, extension).await {
             Ok(first) => Ok(first),
             Err(err) => {
-                tracing::debug!("try connect with ipv6 failed: {}", err);
+                tracing::debug!("create socket with cidr failed: {}", err);
                 self.create_socket_with_addr(fallback).await
             }
         }

@@ -9,7 +9,11 @@ use self::{
         ClientConnection, IncomingConnection, Server, UdpAssociate,
     },
 };
-use crate::{connect::Connector, extension::Extension, serve::Context};
+use crate::{
+    connect::{Connector, TcpConnector, UdpConnector},
+    extension::Extension,
+    serve::Context,
+};
 use error::Error;
 use server::{
     connection::{
@@ -21,7 +25,7 @@ use server::{
 use std::{net::SocketAddr, sync::Arc};
 use tokio::{
     io::AsyncWriteExt,
-    net::{lookup_host, TcpListener, UdpSocket},
+    net::{TcpListener, UdpSocket},
     sync::RwLock,
 };
 use tracing::{instrument, Level};
@@ -83,13 +87,13 @@ async fn handle(
 
     match conn.wait_request().await? {
         ClientConnection::Connect(connect, addr) => {
-            hanlde_connect_proxy(connector, connect, addr, extension).await
+            hanlde_connect_proxy(connector.tcp_connector(), connect, addr, extension).await
         }
         ClientConnection::UdpAssociate(associate, addr) => {
-            handle_udp_proxy(connector, associate, addr, extension).await
+            handle_udp_proxy(connector.udp_connector(), associate, addr, extension).await
         }
         ClientConnection::Bind(bind, addr) => {
-            hanlde_bind_proxy(connector, bind, addr, extension).await
+            hanlde_bind_proxy(connector.tcp_connector(), bind, addr, extension).await
         }
     }
 }
@@ -97,7 +101,7 @@ async fn handle(
 #[instrument(skip(connector, connect), level = Level::DEBUG)]
 #[inline]
 async fn hanlde_connect_proxy(
-    connector: Connector,
+    connector: TcpConnector<'_>,
     connect: Connect<connect::NeedReply>,
     addr: Address,
     extension: Extension,
@@ -105,16 +109,10 @@ async fn hanlde_connect_proxy(
     let target_stream = match addr {
         Address::DomainAddress(domain, port) => {
             connector
-                .tcp_connector()
                 .connect_with_domain((domain, port), extension)
                 .await
         }
-        Address::SocketAddress(socket_addr) => {
-            connector
-                .tcp_connector()
-                .connect(socket_addr, &extension)
-                .await
-        }
+        Address::SocketAddress(socket_addr) => connector.connect(socket_addr, &extension).await,
     };
 
     match target_stream {
@@ -153,7 +151,7 @@ async fn hanlde_connect_proxy(
 #[instrument(skip(connector, associate), level = Level::DEBUG)]
 #[inline]
 async fn handle_udp_proxy(
-    connector: Connector,
+    connector: UdpConnector<'_>,
     associate: UdpAssociate<associate::NeedReply>,
     _: Address,
     extension: Extension,
@@ -175,7 +173,7 @@ async fn handle_udp_proxy(
             let listen_udp = AssociatedUdpSocket::from((udp_socket, buf_size));
 
             let incoming_addr = Arc::new(RwLock::new(SocketAddr::from(([0, 0, 0, 0], 0))));
-            let dispatch_socket = connector.udp_connector().bind_socket(extension).await?;
+            let dispatch_socket = connector.bind_socket(extension).await?;
 
             let res = loop {
                 tokio::select! {
@@ -192,17 +190,10 @@ async fn handle_udp_proxy(
 
                         match dst_addr {
                             Address::SocketAddress(dst_addr) => {
-                                tracing::trace!("[UDP] {src_addr} -> {dst_addr} dispatch packet");
-                                dispatch_socket.send_to(&pkt, dst_addr).await?;
+                                connector.send_packet_with_addr(&dispatch_socket, &pkt, dst_addr).await?;
                             }
                             Address::DomainAddress(domain, port) => {
-                                for dst_addr in lookup_host((domain, port)).await? {
-                                    tracing::trace!("[UDP] {src_addr} -> {dst_addr} dispatch packet");
-                                    let res = dispatch_socket.send_to(&pkt, dst_addr).await;
-                                    if res.is_ok() {
-                                        break;
-                                    }
-                                }
+                                connector.send_packet_with_domain(&dispatch_socket, &pkt, (domain, port)).await?;
                             }
                         };
 
@@ -310,14 +301,13 @@ async fn handle_udp_proxy(
 #[instrument(skip(connector, bind, _addr), level = Level::DEBUG)]
 #[inline]
 async fn hanlde_bind_proxy(
-    connector: Connector,
+    connector: TcpConnector<'_>,
     bind: Bind<bind::NeedFirstReply>,
     _addr: Address,
     extension: Extension,
 ) -> std::io::Result<()> {
-    let listen_ip = connector
-        .tcp_connector()
-        .bind_socket_addr(|| bind.local_addr().map(|socket| socket.ip()), extension)?;
+    let listen_ip =
+        connector.bind_socket_addr(|| bind.local_addr().map(|socket| socket.ip()), extension)?;
     let listener = TcpListener::bind(listen_ip).await?;
 
     let conn = bind
