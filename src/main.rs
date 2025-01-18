@@ -1,4 +1,3 @@
-pub mod alloc;
 mod connect;
 #[cfg(target_family = "unix")]
 mod daemon;
@@ -14,9 +13,29 @@ mod update;
 use clap::{Args, Parser, Subcommand};
 use std::{net::SocketAddr, path::PathBuf};
 
-type Result<T, E = error::Error> = std::result::Result<T, E>;
+#[cfg(feature = "jemalloc")]
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+#[cfg(feature = "tcmalloc")]
+#[global_allocator]
+static ALLOC: tcmalloc::TCMalloc = tcmalloc::TCMalloc;
+
+#[cfg(feature = "mimalloc")]
+#[global_allocator]
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+#[cfg(feature = "snmalloc")]
+#[global_allocator]
+static ALLOC: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
+
+#[cfg(feature = "rpmalloc")]
+#[global_allocator]
+static ALLOC: rpmalloc::RpMalloc = rpmalloc::RpMalloc;
 
 const BIN_NAME: &str = env!("CARGO_PKG_NAME");
+
+type Result<T, E = error::Error> = std::result::Result<T, E>;
 
 #[derive(Parser)]
 #[clap(author, version, about, arg_required_else_help = true)]
