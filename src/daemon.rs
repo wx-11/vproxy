@@ -6,12 +6,12 @@ use std::{
     path::Path,
 };
 
-const PID_PATH: &str = concat!("var/run/", env!("CARGO_PKG_NAME"), ".pid");
-const DEFAULT_STDOUT_PATH: &str = concat!("var/run/", env!("CARGO_PKG_NAME"), ".out");
-const DEFAULT_STDERR_PATH: &str = concat!("var/run/", env!("CARGO_PKG_NAME"), ".err");
+const PID_PATH: &str = concat!("/var/run/", env!("CARGO_PKG_NAME"), ".pid");
+const DEFAULT_STDOUT_PATH: &str = concat!("/var/run/", env!("CARGO_PKG_NAME"), ".out");
+const DEFAULT_STDERR_PATH: &str = concat!("/var/run/", env!("CARGO_PKG_NAME"), ".err");
 
-/// Get the pid of the daemon
-fn get_pid() -> Option<String> {
+#[inline(always)]
+fn pid() -> Option<String> {
     if let Ok(data) = std::fs::read(PID_PATH) {
         let binding = String::from_utf8(data).expect("pid file is not utf8");
         return Some(binding.trim().to_string());
@@ -19,7 +19,7 @@ fn get_pid() -> Option<String> {
     None
 }
 
-/// Check if the current user is root
+#[inline(always)]
 pub fn check_root() {
     if !nix::unistd::Uid::effective().is_root() {
         println!("You must run this executable with root permissions");
@@ -27,9 +27,8 @@ pub fn check_root() {
     }
 }
 
-/// Start the daemon
 pub fn start(args: BootArgs) -> crate::Result<()> {
-    if let Some(pid) = get_pid() {
+    if let Some(pid) = pid() {
         println!("{} is already running with pid: {}", BIN_NAME, pid);
         return Ok(());
     }
@@ -69,13 +68,12 @@ pub fn start(args: BootArgs) -> crate::Result<()> {
     serve::run(args)
 }
 
-/// Stop the daemon
 pub fn stop() -> crate::Result<()> {
     use nix::{sys::signal, unistd::Pid};
 
     check_root();
 
-    if let Some(pid) = get_pid() {
+    if let Some(pid) = pid() {
         let pid = pid.parse::<i32>()?;
         for _ in 0..360 {
             if signal::kill(Pid::from_raw(pid), signal::SIGINT).is_err() {
@@ -89,15 +87,13 @@ pub fn stop() -> crate::Result<()> {
     Ok(())
 }
 
-/// Restart the daemon
 pub fn restart(args: BootArgs) -> crate::Result<()> {
     stop()?;
     start(args)
 }
 
-/// Show the status of the daemon
 pub fn status() -> crate::Result<()> {
-    match get_pid() {
+    match pid() {
         Some(pid) => {
             let mut sys = sysinfo::System::new();
 
@@ -122,7 +118,6 @@ pub fn status() -> crate::Result<()> {
     Ok(())
 }
 
-/// Show the log of the daemon
 pub fn log() -> crate::Result<()> {
     fn read_and_print_file(file_path: &'static str, placeholder: &str) -> crate::Result<()> {
         if !Path::new(file_path).exists() {
