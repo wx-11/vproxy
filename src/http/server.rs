@@ -218,12 +218,11 @@ impl Handler {
         authority: Authority,
         extension: Extension,
     ) -> std::io::Result<()> {
-        let mut server = {
-            self.connector
-                .tcp_connector()
-                .connect_with_authority(authority, extension)
-                .await?
-        };
+        let mut server = self
+            .connector
+            .tcp_connector()
+            .connect_with_authority(authority, extension)
+            .await?;
 
         match tokio::io::copy_bidirectional(&mut TokioIo::new(upgraded), &mut server).await {
             Ok((from_client, from_server)) => {
