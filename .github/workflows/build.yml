@@ -2,7 +2,6 @@ name: 打包
 
 on:
   push:
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -15,7 +14,6 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -24,12 +22,10 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install depends
-        if: startsWith(github.ref, 'refs/tags/')
         run: |
           sudo apt update && sudo apt install upx rename -y
 
       - name: Get tag
-        if: startsWith(github.ref, 'refs/tags/')
         id: tag
         uses: dawidd6/action-get-tag@v1
         with:
@@ -51,24 +47,20 @@ jobs:
         run: cargo clippy --all-targets
 
       - name: Linux build
-        if: startsWith(github.ref, 'refs/tags/')
         run: |
           docker run --rm -t -v $(pwd):/build -w /build -e tag=$tag ghcr.io/wx-11/cargo-zigbuild -c "os=linux ./.github/build.sh"
 
       - name: MacOS build
-        if: startsWith(github.ref, 'refs/tags/')
         run: |
           docker run --rm -t -v $(pwd):/build -w /build -e tag=$tag ghcr.io/wx-11/cargo-zigbuild -c "os=macos ./.github/build.sh"
 
       - name: Windows build
-        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           docker run --rm -t -v $(pwd):/build -w /build -e tag=$tag ghcr.io/wx-11/cargo-zigbuild -c "os=windows ./.github/build.sh"
           
       - name: Upload binaries to GitHub Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           token: ${{ secrets.CR_PAT }}
           files: |
@@ -85,7 +77,6 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Get tag
-        if: startsWith(github.ref, 'refs/tags/')
         id: tag
         uses: dawidd6/action-get-tag@v1
         with:
@@ -106,7 +97,6 @@ jobs:
           override: true
 
       - uses: katyo/publish-crates@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
           ignore-unpublished-changes: true
@@ -123,7 +113,6 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Log in to the Container registry
-        if: startsWith(github.ref, 'refs/tags/')
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
@@ -131,14 +120,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
-        if: startsWith(github.ref, 'refs/tags/')
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Build and push Docker image
-        if: startsWith(github.ref, 'refs/tags/')
         uses: docker/build-push-action@v4
         with:
           context: .
