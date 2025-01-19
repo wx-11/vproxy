@@ -204,8 +204,8 @@ $ for i in `seq 1 3`; do curl -x "socks5h://test-ttl-2:test@127.0.0.1:8101" -L v
 2001:470:70c6:41d0:14fd:d025:835a:d105
 ```
 
-> 主要区别在于 `socks5h` 和 `socks5` 的 DNS 解析行为：
-> 
+### 关于 `socks5h` 和 `socks5` 的 DNS 解析行为： 引用claude回复
+ 
 > 1. `socks5://` (没有h)：
 > * DNS 解析发生在本地客户端
 > * 先在本地解析域名（ifconfig.co）得到 IP 地址
