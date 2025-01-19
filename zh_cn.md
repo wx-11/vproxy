@@ -90,10 +90,6 @@ $ vproxy run -h
           打印帮助信息
 ```
 
-<details>
-
-<summary><div class="markdown-heading" dir="auto"><h2 tabindex="-1" class="heading-element" dir="auto">如果您需要更详细的使用信息，请点击这里查看</h2><a id="user-content-高级用法" class="anchor" aria-label="Permalink: 高级用法" href="#高级用法"></a></div></summary>
-
 ### 注意事项
 
 如果您使用 sudo 运行程序，它会自动为您配置 `sysctl net.ipv6.ip_nonlocal_bind=1` 和 `ip route add local 2001:470:e953::/48 dev lo`。如果不使用 sudo 运行，您需要手动配置这些选项。
@@ -139,6 +135,8 @@ while true; do curl -x http://127.0.0.1:8100 -s https://api.ip.sb/ip -A Mozilla;
 2001:470:e953:f1d7:eb68:cc59:b2d0:2c6f
 ```
 
+## 高级用法
+
 - TTL 扩展
 
 在用户名后附加 `-ttl-`，其中 TTL 是一个固定值（例如 `username-ttl-2`）。TTL 值是可以使用相同 IP 进行请求的次数。当达到 TTL 值时，IP 将被更改。
@@ -150,6 +148,8 @@ while true; do curl -x http://127.0.0.1:8100 -s https://api.ip.sb/ip -A Mozilla;
 - Range 扩展
 
 在用户名后附加 `-range-id`，其中 range 是固定值，ID 是任意随机值（例如 `username-range-123456`）。通过保持 Range ID 不变，您可以在固定范围内使用固定 CIDR 范围。此外，您必须设置启动参数 `--cidr-range`，且长度在有效范围内。
+
+
 
 ### 示例
 
@@ -200,5 +200,3 @@ $ for i in `seq 1 3`; do curl -x "socks5h://test-ttl-2:test@127.0.0.1:8101" -L v
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d105
 ```
-
-</details>
