@@ -14,6 +14,8 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     environment: Linux
+    permissions: # 添加权限
+      contents: write
     steps:
       - uses: actions/checkout@v3
       
@@ -36,21 +38,21 @@ jobs:
 
       - name: Linux build
         run: |
-          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=linux ./.github/build.sh"
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/0x676e67/cargo-zigbuild -c "os=linux ./.github/build.sh"
 
       - name: MacOS build
         run: |
-          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=macos ./.github/build.sh"
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/0x676e67/cargo-zigbuild -c "os=macos ./.github/build.sh"
 
       - name: Windows build
         shell: bash
         run: |
-          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=windows ./.github/build.sh"
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/0x676e67/cargo-zigbuild -c "os=windows ./.github/build.sh"
           
       - name: Upload binaries to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          token: ${{ secrets.CR_PAT }}
+          token: ${{ github.token }} # 使用 GITHUB_TOKEN
           tag_name: v${{ steps.get_version.outputs.version }}
           files: |
             bin/*
