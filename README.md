@@ -154,7 +154,7 @@ Append `-session-id` to the username, where session is a fixed value and ID is a
 
 - Range Extension
 
-Append `-range-id` to the username, where range is a fixed value and ID is any random value (e.g. `username-range-123456`). Keep the Range ID unchanged to use a fixed IP. For HTTP users that use passwordless authorization and require a fixed IP address, you can add a `range` header to the request (e.g. `range: 123456`). By keeping the Range ID unchanged, you can use a fixed CIDR range in a fixed range. in addition, you must set the startup parameter `--cidr-range`, and the length is within a valid range.
+Append `-range-id` to the username, where range is a fixed value and ID is any random value (e.g. `username-range-123456`). By keeping the Range ID unchanged, you can use a fixed CIDR range in a fixed range. in addition, you must set the startup parameter `--cidr-range`, and the length is within a valid range. For HTTP users that use passwordless authorization and require a valid range IP address, you can add a `range` header to the request (e.g. `range: 123456`). 
 
 ### Examples
 
