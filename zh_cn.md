@@ -1,6 +1,9 @@
+
 # vproxy
 
 一个高性能的 `HTTP`/`HTTPS`/`SOCKS5` 代理服务器
+
+### 本项目仅为备份 防止上次github封号导致项目404 不存在篡改所有者版权和任何源码
 
 ## 特性
 
@@ -85,7 +88,7 @@ $ vproxy run -h
   -r, --cidr-range <CIDR_RANGE>
           IP-CIDR-Range，例如 64
   -f, --fallback <FALLBACK>
-          回退地址
+          回退地址 作用参考( https://github.com/0x676e67/vproxy/issues/41#issuecomment-2111324521 )
   -h, --help
           打印帮助信息
 ```
