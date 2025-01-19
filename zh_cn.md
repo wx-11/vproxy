@@ -90,11 +90,9 @@ $ vproxy run -h
           打印帮助信息
 ```
 
-## 高级用法
-
 <details>
 
-<summary>如果您需要更详细的使用信息，请点击这里查看</summary>
+<summary><div class="markdown-heading" dir="auto"><h2 tabindex="-1" class="heading-element" dir="auto">如果您需要更详细的使用信息，请点击这里查看</h2><a id="user-content-高级用法" class="anchor" aria-label="Permalink: 高级用法" href="#高级用法"></a></div></summary>
 
 ### 注意事项
 
