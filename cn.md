@@ -64,7 +64,7 @@ $ vproxy run -h
           打印帮助信息
 ```
 
-## 安装
+## 更多
 
 <details>
 
@@ -75,13 +75,13 @@ $ vproxy run -h
 - curl
 
 ```bash
-curl -s -o /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && bash /tmp/install.sh -y
+curl -s -o /tmp/install.sh https://raw.githubusercontent.com/0x676e67/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh
 ```
 
 - wget
 
 ```bash
-wget -O /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && bash /tmp/install.sh -y
+wget -O /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh 
 ```
 
 - cargo
@@ -160,12 +160,12 @@ while true; do curl -x http://127.0.0.1:8100 -s https://api.ip.sb/ip -A Mozilla;
 ```shell
 vproxy run --bind 127.0.0.1:8101 -i 2001:470:70c6::/48 http -u test -p test
 
-$ for i in `seq 1 10`; do curl -x "http://test-session-123456789:test@127.0.0.1:8101" https://api6.ipify.org; done
+$ for i in `seq 1 10`; do curl -x "http://test-session-123456789:test@127.0.0.1:8101" -L v6.ipinfo.io; done
 2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
 2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
 2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
 
-$ for i in `seq 1 10`; do curl -x "http://test-session-987654321:test@127.0.0.1:8101" https://api6.ipify.org; done
+$ for i in `seq 1 10`; do curl -x "http://test-session-987654321:test@127.0.0.1:8101" -L v6.ipinfo.io; done
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d102
@@ -176,12 +176,12 @@ $ for i in `seq 1 10`; do curl -x "http://test-session-987654321:test@127.0.0.1:
 ```shell
 vproxy run --bind 127.0.0.1:8101 -i 2001:470:70c6::/48 socks5 -u test -p test
 
-$ for i in `seq 1 3`; do curl -x "socks5h://test-session-123456789:test@127.0.0.1:8101" https://api6.ipify.org; done
+$ for i in `seq 1 3`; do curl -x "socks5h://test-session-123456789:test@127.0.0.1:8101" -L v6.ipinfo.io; done
 2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
 2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
 2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
 
-$ for i in `seq 1 3`; do curl -x "socks5h://test-session-987654321:test@127.0.0.1:8101" https://api6.ipify.org; done
+$ for i in `seq 1 3`; do curl -x "socks5h://test-session-987654321:test@127.0.0.1:8101" -L v6.ipinfo.io; done
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d102
@@ -192,12 +192,12 @@ $ for i in `seq 1 3`; do curl -x "socks5h://test-session-987654321:test@127.0.0.
 ```shell
 vproxy run --bind 127.0.0.1:8101 -i 2001:470:70c6::/48 socks5 -u test -p test
 
-$ for i in `seq 1 3`; do curl -x "socks5h://test-ttl-2:test@127.0.0.1:8101" https://api6.ipify.org; done
+$ for i in `seq 1 3`; do curl -x "socks5h://test-ttl-2:test@127.0.0.1:8101" -L v6.ipinfo.io; done
 2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
 2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
 2001:470:70c6:93ee:9b7c:b4f9:4913:22f6
 
-$ for i in `seq 1 3`; do curl -x "socks5h://test-ttl-2:test@127.0.0.1:8101" https://api6.ipify.org; done
+$ for i in `seq 1 3`; do curl -x "socks5h://test-ttl-2:test@127.0.0.1:8101" -L v6.ipinfo.io; done
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d102
 2001:470:70c6:41d0:14fd:d025:835a:d105
