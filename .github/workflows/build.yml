@@ -1,0 +1,108 @@
+name: 打包
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  check_upstream_merge:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check_commit.outputs.is_upstream_merge }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      
+      - name: Check if commit is upstream merge
+        id: check_commit
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=format:%s)
+          if [[ "$COMMIT_MSG" == *"Merge branch"* ]]; then
+            echo "is_upstream_merge=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_upstream_merge=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: check_upstream_merge
+    if: needs.check_upstream_merge.outputs.should_run == 'true'
+    name: Build
+    runs-on: ubuntu-latest
+    environment: Linux
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Get version from Cargo.toml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | cut -d '"' -f2)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install depends
+        run: |
+          sudo apt update && sudo apt install upx rename -y
+
+      - name: Linux build
+        run: |
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=linux ./.github/build.sh"
+
+      - name: MacOS build
+        run: |
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=macos ./.github/build.sh"
+
+      - name: Windows build
+        shell: bash
+        run: |
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=windows ./.github/build.sh"
+          
+      - name: Upload binaries to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ github.token }}
+          tag_name: v${{ steps.get_version.outputs.version }}
+          files: |
+            bin/*
+          generate_release_notes: true
+
+  docker:
+    needs: [check_upstream_merge, build]
+    if: needs.check_upstream_merge.outputs.should_run == 'true'
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
