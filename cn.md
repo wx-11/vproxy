@@ -151,7 +151,7 @@ while true; do curl -x http://127.0.0.1:8100 -s https://api.ip.sb/ip -A Mozilla;
 
 - Range 扩展
 
-在用户名后附加 `-range-id`，其中 range 是固定值，ID 是任意随机值（例如 `username-range-123456`）。保持 Range ID 不变以使用固定 IP。对于使用无密码授权且需要固定 IP 地址的 HTTP 用户，您可以在请求中添加 `range` 头（例如 `range: 123456`）。通过保持 Range ID 不变，您可以在固定范围内使用固定 CIDR 范围。此外，您必须设置启动参数 `--cidr-range`，且长度在有效范围内。
+在用户名后附加 `-range-id`，其中 range 是固定值，ID 是任意随机值（例如 `username-range-123456`）。通过保持 Range ID 不变，您可以在固定范围内使用固定 CIDR 范围。此外，您必须设置启动参数 `--cidr-range`，且长度在有效范围内。对于使用无密码授权且需要固定范围内使用固定 CIDR 范围 IP 地址的 HTTP 用户，您可以在请求中添加 `range` 头（例如 `range: 123456`）。
 
 ### 示例
 
