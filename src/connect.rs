@@ -7,10 +7,7 @@ use hyper_util::{
     rt::{TokioExecutor, TokioTimer},
 };
 use rand::random;
-use std::{
-    net::ToSocketAddrs,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::{
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     time::Duration,
@@ -204,52 +201,6 @@ impl TcpConnector<'_> {
     }
 
     /// Attempts to establish a TCP connection to each of the target addresses
-    /// resolved from the provided authority.
-    ///
-    /// This method takes an `Authority` and an `Extension` as arguments. It resolves
-    /// the authority to a list of socket addresses and attempts to connect to each
-    /// address in turn using the `connect` method. If a connection is successfully
-    /// established, it returns the connected `TcpStream`. If all connection attempts
-    /// fail, it returns the last encountered error.
-    ///
-    /// # Arguments
-    ///
-    /// * `authority` - The authority (host:port) to resolve and connect to.
-    /// * `extension` - The extensions used during the connection process.
-    ///
-    /// # Returns
-    ///
-    /// A `std::io::Result<TcpStream>` representing the result of the connection attempt.
-    /// If successful, it returns `Ok(TcpStream)`. If all attempts fail, it returns the
-    /// last encountered error.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
-    /// let tcp_connector = TcpConnector { inner: &connector };
-    /// let authority = "example.com:80".parse().unwrap();
-    /// let extension = Extension::default();
-    /// let stream = tcp_connector.connect_with_authority(authority, extension).await?;
-    /// ```
-    pub async fn connect_with_authority(
-        &self,
-        authority: Authority,
-        extension: Extension,
-    ) -> std::io::Result<TcpStream> {
-        let mut last_err = None;
-        let addrs = authority.as_str().to_socket_addrs()?;
-        for target_addr in addrs {
-            match self.connect(target_addr, &extension).await {
-                Ok(stream) => return Ok(stream),
-                Err(e) => last_err = Some(e),
-            };
-        }
-
-        Err(error(last_err))
-    }
-
-    /// Attempts to establish a TCP connection to each of the target addresses
     /// in the provided iterator using the provided extensions.
     ///
     /// This function takes an `IntoIterator` of `SocketAddr` for the target
@@ -288,6 +239,45 @@ impl TcpConnector<'_> {
         }
 
         Err(error(last_err))
+    }
+
+    /// Attempts to establish a TCP connection to each of the target addresses
+    /// resolved from the provided authority.
+    ///
+    /// This method takes an `Authority` and an `Extension` as arguments. It resolves
+    /// the authority to a list of socket addresses and attempts to connect to each
+    /// address in turn using the `connect` method. If a connection is successfully
+    /// established, it returns the connected `TcpStream`. If all connection attempts
+    /// fail, it returns the last encountered error.
+    ///
+    /// # Arguments
+    ///
+    /// * `authority` - The authority (host:port) to resolve and connect to.
+    /// * `extension` - The extensions used during the connection process.
+    ///
+    /// # Returns
+    ///
+    /// A `std::io::Result<TcpStream>` representing the result of the connection attempt.
+    /// If successful, it returns `Ok(TcpStream)`. If all attempts fail, it returns the
+    /// last encountered error.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
+    /// let tcp_connector = TcpConnector { inner: &connector };
+    /// let authority = "example.com:80".parse().unwrap();
+    /// let extension = Extension::default();
+    /// let stream = tcp_connector.connect_with_authority(authority, extension).await?;
+    /// ```
+    #[inline]
+    pub async fn connect_with_authority(
+        &self,
+        authority: Authority,
+        extension: Extension,
+    ) -> std::io::Result<TcpStream> {
+        let addrs = lookup_host(authority.as_str()).await?;
+        self.connect_with_addrs(addrs, extension).await
     }
 
     /// Attempts to establish a TCP connection to the target domain using the
@@ -603,11 +593,43 @@ impl TcpConnector<'_> {
     }
 }
 
+/// `UdpConnector` struct is used to create UDP connectors, optionally configured
+/// with an IPv6 CIDR and a fallback IP address.
+///
+/// This struct provides methods to bind UDP sockets to appropriate IP addresses
+/// based on the configuration of the `Connector`.
 pub struct UdpConnector<'a> {
     inner: &'a Connector,
 }
 
 impl UdpConnector<'_> {
+    /// Binds a UDP socket to an IP address based on the provided CIDR, fallback IP, and extensions.
+    ///
+    /// This method determines the appropriate IP address to bind the socket to based on the
+    /// configuration of the `Connector`. It first checks if a CIDR range is provided. If so,
+    /// it assigns an IP address from the CIDR range using the provided extensions. If no CIDR
+    /// range is provided but a fallback IP address is available, it uses the fallback IP address.
+    /// If neither is available, it binds to a default address.
+    ///
+    /// # Arguments
+    ///
+    /// * `extension` - The extensions used to determine the IP address from the CIDR range.
+    ///
+    /// # Returns
+    ///
+    /// A `std::io::Result<UdpSocket>` representing the result of the binding attempt.
+    /// If successful, it returns `Ok(UdpSocket)`. If the binding fails, it returns the
+    /// encountered error.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
+    /// let tcp_connector = TcpConnector { inner: &connector };
+    /// let extension = Extension::default();
+    /// let udp_socket = tcp_connector.bind_socket(extension).await?;
+    /// ```
+    #[inline(always)]
     pub async fn bind_socket(&self, extension: Extension) -> std::io::Result<UdpSocket> {
         match (self.inner.cidr, self.inner.fallback) {
             (None, Some(fallback)) => self.create_socket_with_addr(fallback).await,
@@ -618,6 +640,88 @@ impl UdpConnector<'_> {
             }
             (None, None) => UdpSocket::bind(SocketAddr::from(([0, 0, 0, 0], 0))).await,
         }
+    }
+
+    /// Sends a UDP packet to the specified address using the provided UDP socket.
+    ///
+    /// This method sends a UDP packet to the specified destination address using the provided
+    /// UDP socket.
+    ///
+    /// # Arguments
+    ///
+    /// * `dispatch_socket` - The UDP socket used to send the packet.
+    /// * `pkt` - The packet data to be sent.
+    /// * `dst_addr` - The destination address to send the packet to.
+    ///
+    /// # Returns
+    ///
+    /// A `std::io::Result<()>` representing the result of the send attempt.
+    /// If successful, it returns `Ok(())`. If the send fails, it returns the encountered error.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
+    /// let tcp_connector = TcpConnector { inner: &connector };
+    /// let udp_socket = UdpSocket::bind("0.0.0.0:0").await?;
+    /// let pkt = b"Hello, world!";
+    /// let dst_addr = "127.0.0.1:8080".parse().unwrap();
+    /// tcp_connector.send_packet_with_addr(&udp_socket, pkt, dst_addr).await?;
+    /// ```
+    #[inline(always)]
+    pub async fn send_packet_with_addr(
+        &self,
+        dispatch_socket: &UdpSocket,
+        pkt: &[u8],
+        dst_addr: SocketAddr,
+    ) -> std::io::Result<usize> {
+        dispatch_socket.send_to(pkt, dst_addr).await
+    }
+
+    /// Sends a UDP packet to the specified domain and port using the provided UDP socket.
+    ///
+    /// This method resolves the domain to an IP address and sends a UDP packet to the specified
+    /// destination domain and port using the provided UDP socket.
+    ///
+    /// # Arguments
+    ///
+    /// * `dispatch_socket` - The UDP socket used to send the packet.
+    /// * `pkt` - The packet data to be sent.
+    /// * `dst_domain` - A tuple containing the destination domain and port.
+    ///
+    /// # Returns
+    ///
+    /// A `std::io::Result<()>` representing the result of the send attempt.
+    /// If successful, it returns `Ok(())`. If the send fails, it returns the encountered error.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let connector = Connector::new(Some(cidr), Some(cidr_range), Some(fallback), connect_timeout);
+    /// let tcp_connector = TcpConnector { inner: &connector };
+    /// let udp_socket = UdpSocket::bind("0.0.0.0:0").await?;
+    /// let pkt = b"Hello, world!";
+    /// let dst_domain = ("example.com".to_string(), 8080);
+    /// tcp_connector.send_packet_with_domain(&udp_socket, pkt, dst_domain).await?;
+    /// ```
+    pub async fn send_packet_with_domain(
+        &self,
+        dispatch_socket: &UdpSocket,
+        pkt: &[u8],
+        dst_domain: (String, u16),
+    ) -> std::io::Result<usize> {
+        let mut last_err = None;
+        let addrs = lookup_host(dst_domain).await?;
+        for addr in addrs {
+            match self.send_packet_with_addr(dispatch_socket, pkt, addr).await {
+                Ok(s) => return Ok(s),
+                Err(e) => {
+                    last_err = Some(e);
+                }
+            }
+        }
+
+        Err(error(last_err))
     }
 
     /// Creates a UDP socket and binds it to the provided IP address.
@@ -718,7 +822,7 @@ impl UdpConnector<'_> {
         match self.create_socket_with_cidr(cidr, extension).await {
             Ok(first) => Ok(first),
             Err(err) => {
-                tracing::debug!("try connect with ipv6 failed: {}", err);
+                tracing::debug!("create socket with cidr failed: {}", err);
                 self.create_socket_with_addr(fallback).await
             }
         }

@@ -1,5 +1,6 @@
 [![Release](https://github.com/0x676e67/vproxy/actions/workflows/release.yml/badge.svg)](https://github.com/0x676e67/vproxy/actions/workflows/release.yml)
 [![Crates.io License](https://img.shields.io/crates/l/vproxy)](./LICENSE)
+![Crates.io MSRV](https://img.shields.io/crates/msrv/vproxy)
 [![crates.io](https://img.shields.io/crates/v/vproxy.svg)](https://crates.io/crates/vproxy)
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/vproxy)](https://crates.io/crates/vproxy)
 
