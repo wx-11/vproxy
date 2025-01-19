@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Fetch the latest release information
-release_info=$(curl -s "https://api.github.com/repos/0x676e67/vproxy/releases/latest")
+release_info=$(curl -s "https://api.github.com/repos/wx-11/vproxy/releases/latest")
 tag=$(echo $release_info | grep -oP '"tag_name": "\K(.*?)(?=")')
 version=${tag#v}
 
@@ -24,7 +24,7 @@ case "$ARCH-$OS" in
 esac
 
 # Construct the download URL
-download_url="https://github.com/0x676e67/vproxy/releases/download/$tag/$FILENAME"
+download_url="https://github.com/wx-11/vproxy/releases/download/$tag/$FILENAME"
 
 echo "Download URL: $download_url"
 
