@@ -13,28 +13,28 @@
 
 ### 安装方式
 
-- curl
-
-```bash
-curl -s -o /tmp/install.sh https://raw.githubusercontent.com/0x676e67/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh
-```
-
 - wget
 
 ```bash
 wget -O /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh 
 ```
 
-- cargo
+- curl
 
 ```bash
-cargo install vproxy
+curl -s -o /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh
 ```
 
 - Docker
 
 ```bash
 docker run --rm -it ghcr.io/wx-11/vproxy:latest run http
+```
+
+- cargo
+
+```bash
+cargo install vproxy
 ```
 
 ## 使用手册
@@ -125,7 +125,7 @@ vproxy status
 vproxy update
 
 # 测试循环请求
-while true; do curl -x http://127.0.0.1:8100 -s https://api.ip.sb/ip -A Mozilla; done
+while true; do curl -x http://127.0.0.1:8100 -s https://ifconfig.com -A Mozilla; done
 ...
 2001:470:e953:5b75:c862:3328:3e8f:f4d1
 2001:470:e953:b84d:ad7d:7399:ade5:4c1c
