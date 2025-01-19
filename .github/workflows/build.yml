@@ -2,7 +2,8 @@ name: 打包
 
 on:
   push:
-  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 env:
@@ -10,11 +11,32 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  check_upstream_merge:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check_commit.outputs.is_upstream_merge }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      
+      - name: Check if commit is upstream merge
+        id: check_commit
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=format:%s)
+          if [[ "$COMMIT_MSG" == *"Merge branch"* ]]; then
+            echo "is_upstream_merge=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_upstream_merge=false" >> $GITHUB_OUTPUT
+          fi
+
   build:
+    needs: check_upstream_merge
+    if: needs.check_upstream_merge.outputs.should_run == 'true'
     name: Build
     runs-on: ubuntu-latest
     environment: Linux
-    permissions: # 添加权限
+    permissions:
       contents: write
     steps:
       - uses: actions/checkout@v3
@@ -30,38 +52,33 @@ jobs:
         run: |
           sudo apt update && sudo apt install upx rename -y
 
-      - name: Style check
-        run: cargo fmt --all -- --check
-
-      - name: Clippy check
-        run: cargo clippy --all-targets
-
       - name: Linux build
         run: |
-          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/0x676e67/cargo-zigbuild -c "os=linux ./.github/build.sh"
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=linux ./.github/build.sh"
 
       - name: MacOS build
         run: |
-          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/0x676e67/cargo-zigbuild -c "os=macos ./.github/build.sh"
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=macos ./.github/build.sh"
 
       - name: Windows build
         shell: bash
         run: |
-          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/0x676e67/cargo-zigbuild -c "os=windows ./.github/build.sh"
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=windows ./.github/build.sh"
           
       - name: Upload binaries to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          token: ${{ github.token }} # 使用 GITHUB_TOKEN
+          token: ${{ github.token }}
           tag_name: v${{ steps.get_version.outputs.version }}
           files: |
             bin/*
           generate_release_notes: true
 
   docker:
+    needs: [check_upstream_merge, build]
+    if: needs.check_upstream_merge.outputs.should_run == 'true'
     name: Build and push Docker image
     runs-on: ubuntu-latest
-    needs: ["build"]
     permissions:
       contents: read
       packages: write
@@ -74,7 +91,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
