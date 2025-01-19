@@ -5,10 +5,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -20,25 +16,17 @@ jobs:
     environment: Linux
     steps:
       - uses: actions/checkout@v3
+      
+      - name: Get version from Cargo.toml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | cut -d '"' -f2)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Install depends
         run: |
           sudo apt update && sudo apt install upx rename -y
-
-      - name: Get tag
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          strip_v: true
-
-      - name: Tag Check
-        run: |
-          echo "tag=${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
-          echo "tag=${{ steps.tag.outputs.tag }}" >> $GITHUB_OUTPUT
-          if [ -z "${{ steps.tag.outputs.tag }}" ]; then
-            echo "tag=latest" >> $GITHUB_OUTPUT
-            echo "tag=latest" >> $GITHUB_ENV
-          fi
 
       - name: Style check
         run: cargo fmt --all -- --check
@@ -48,63 +36,30 @@ jobs:
 
       - name: Linux build
         run: |
-          docker run --rm -t -v $(pwd):/build -w /build -e tag=$tag ghcr.io/wx-11/cargo-zigbuild -c "os=linux ./.github/build.sh"
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=linux ./.github/build.sh"
 
       - name: MacOS build
         run: |
-          docker run --rm -t -v $(pwd):/build -w /build -e tag=$tag ghcr.io/wx-11/cargo-zigbuild -c "os=macos ./.github/build.sh"
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=macos ./.github/build.sh"
 
       - name: Windows build
         shell: bash
         run: |
-          docker run --rm -t -v $(pwd):/build -w /build -e tag=$tag ghcr.io/wx-11/cargo-zigbuild -c "os=windows ./.github/build.sh"
+          docker run --rm -t -v $(pwd):/build -w /build -e tag=$VERSION ghcr.io/wx-11/cargo-zigbuild -c "os=windows ./.github/build.sh"
           
       - name: Upload binaries to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.CR_PAT }}
+          tag_name: v${{ steps.get_version.outputs.version }}
           files: |
             bin/*
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
           generate_release_notes: true
-
-  crates:
-    name: Publish crates
-    runs-on: ubuntu-latest
-    environment: Linux
-    needs: ["build"]
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Get tag
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          strip_v: true
-
-      - name: Tag Check
-        run: |
-          echo "tag=${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
-          echo "tag=${{ steps.tag.outputs.tag }}" >> $GITHUB_OUTPUT
-          if [ -z "${{ steps.tag.outputs.tag }}" ]; then
-            echo "tag=latest" >> $GITHUB_OUTPUT
-            echo "tag=latest" >> $GITHUB_ENV
-          fi
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - uses: katyo/publish-crates@v2
-        with:
-          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-          ignore-unpublished-changes: true
 
   docker:
     name: Build and push Docker image
     runs-on: ubuntu-latest
-    needs: ["build", "crates"]
+    needs: ["build"]
     permissions:
       contents: read
       packages: write
