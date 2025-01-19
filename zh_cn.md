@@ -95,7 +95,7 @@ $ vproxy run -h
 
 ### 注意事项
 
-如果您使用 sudo 运行程序，它会自动为您配置 `sysctl net.ipv6.ip_nonlocal_bind=1` 和 `ip route add local 2001:470:e953::/48 dev lo`。如果不使用 sudo 运行，您需要手动配置这些选项。
+如果您使用 完全的root权限运行程序，它会自动为您配置 `sysctl net.ipv6.ip_nonlocal_bind=1` 和 `ip route add local 2001:470:e953::/48 dev lo`。如果权限不够，您需要手动配置这些选项。 参考( https://github.com/0x676e67/vproxy/issues/118#issuecomment-2600935945)
 
 如果未配置子网，将使用本地默认网络代理请求。当本地机器设置优先 `IPv4`/`IPv6` 且优先级为 `IPv4` 时，它将始终使用 `IPv4` 发出请求（如果有的话）。
 
@@ -128,7 +128,7 @@ vproxy status
 vproxy update
 
 # 测试循环请求
-while true; do curl -x http://127.0.0.1:8100 -s https://ifconfig.com -A Mozilla; done
+while true; do curl -x http://127.0.0.1:8100 -s https://ifconfig.co -A Mozilla; done
 ...
 2001:470:e953:5b75:c862:3328:3e8f:f4d1
 2001:470:e953:b84d:ad7d:7399:ade5:4c1c
