@@ -11,6 +11,32 @@
 - 基础认证
 - 代理扩展
 
+### 安装方式
+
+- curl
+
+```bash
+curl -s -o /tmp/install.sh https://raw.githubusercontent.com/0x676e67/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh
+```
+
+- wget
+
+```bash
+wget -O /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh 
+```
+
+- cargo
+
+```bash
+cargo install vproxy
+```
+
+- Docker
+
+```bash
+docker run --rm -it ghcr.io/wx-11/vproxy:latest run http
+```
+
 ## 使用手册
 
 ```shell
@@ -64,37 +90,11 @@ $ vproxy run -h
           打印帮助信息
 ```
 
-## 更多
+## 高级用法
 
 <details>
 
-<summary>如果您需要更详细的安装和使用信息，请点击这里查看</summary>
-
-### 安装方式
-
-- curl
-
-```bash
-curl -s -o /tmp/install.sh https://raw.githubusercontent.com/0x676e67/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh
-```
-
-- wget
-
-```bash
-wget -O /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh 
-```
-
-- cargo
-
-```bash
-cargo install vproxy
-```
-
-- Docker
-
-```bash
-docker run --rm -it ghcr.io/wx-11/vproxy:latest run http
-```
+<summary>如果您需要更详细的使用信息，请点击这里查看</summary>
 
 ### 注意事项
 
@@ -151,7 +151,7 @@ while true; do curl -x http://127.0.0.1:8100 -s https://api.ip.sb/ip -A Mozilla;
 
 - Range 扩展
 
-在用户名后附加 `-range-id`，其中 range 是固定值，ID 是任意随机值（例如 `username-range-123456`）。通过保持 Range ID 不变，您可以在固定范围内使用固定 CIDR 范围。此外，您必须设置启动参数 `--cidr-range`，且长度在有效范围内。对于使用无密码授权且需要固定范围内使用固定 CIDR 范围 IP 地址的 HTTP 用户，您可以在请求中添加 `range` 头（例如 `range: 123456`）。
+在用户名后附加 `-range-id`，其中 range 是固定值，ID 是任意随机值（例如 `username-range-123456`）。通过保持 Range ID 不变，您可以在固定范围内使用固定 CIDR 范围。此外，您必须设置启动参数 `--cidr-range`，且长度在有效范围内。
 
 ### 示例
 
