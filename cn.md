@@ -1,7 +1,5 @@
 # vproxy
 
-> 🚀 通过[在 GitHub 上赞助我](https://github.com/0x676e67/0x676e67/blob/main/SPONSOR.md)来帮助我更好地进行开源分享
-
 一个高性能的 `HTTP`/`HTTPS`/`SOCKS5` 代理服务器
 
 ## 特性
@@ -77,13 +75,13 @@ $ vproxy run -h
 - curl
 
 ```bash
-curl -s -o /tmp/install.sh https://raw.githubusercontent.com/0x676e67/vproxy/main/.github/install.sh && bash /tmp/install.sh -y
+curl -s -o /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && bash /tmp/install.sh -y
 ```
 
 - wget
 
 ```bash
-wget -O /tmp/install.sh https://raw.githubusercontent.com/0x676e67/vproxy/main/.github/install.sh && bash /tmp/install.sh -y
+wget -O /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && bash /tmp/install.sh -y
 ```
 
 - cargo
@@ -95,7 +93,7 @@ cargo install vproxy
 - Docker
 
 ```bash
-docker run --rm -it ghcr.io/0x676e67/vproxy:latest run http
+docker run --rm -it ghcr.io/wx-11/vproxy:latest run http
 ```
 
 ### 注意事项
@@ -206,15 +204,3 @@ $ for i in `seq 1 3`; do curl -x "socks5h://test-ttl-2:test@127.0.0.1:8101" http
 ```
 
 </details>
-
-## 贡献
-
-如果您想提交贡献，请开启一个[Pull Request](https://github.com/0x676e67/vproxy/pulls)。
-
-## 获取帮助
-
-您的问题可能已经在[issues](https://github.com/0x676e67/vproxy/issues)中得到解答。
-
-## 许可证
-
-**vproxy** © [0x676e67](https://github.com/0x676e67)，基于 [GPL-3.0](./LICENSE) 许可证发布。
