@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd /tmp
+
 # Fetch the latest release information
 release_info=$(curl -s "https://api.github.com/repos/wx-11/vproxy/releases/latest")
 tag=$(echo $release_info | grep -oP '"tag_name": "\K(.*?)(?=")')
