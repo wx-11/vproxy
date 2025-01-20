@@ -1,59 +1,69 @@
 #!/bin/bash
 
-cd /tmp
+# 设置工作目录
+cd /tmp || exit
 
-# Fetch the latest release information
-release_info=$(curl -s "https://api.github.com/repos/wx-11/vproxy/releases/latest")
-tag=$(echo $release_info | grep -oP '"tag_name": "\K(.*?)(?=")')
+# 定义错误处理函数
+handle_error() {
+    echo "错误: $1"
+    exit 1
+}
+
+# 获取最新版本信息
+echo "正在获取最新版本信息..."
+release_info=$(curl -s "https://api.github.com/repos/wx-11/vproxy/releases/latest") || handle_error "无法获取版本信息"
+tag=$(echo "$release_info" | grep -oP '"tag_name": "\K(.*?)(?=")') || handle_error "无法解析版本标签"
 version=${tag#v}
 
-# Get system architecture and OS
+# 获取系统架构和操作系统信息
 ARCH=$(uname -m)
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+echo "检测到系统: $ARCH-$OS"
 
-# Select the appropriate filename based on the system architecture and OS
+# 根据系统架构和操作系统选择合适的文件名
+FILENAME="vproxy-$version-"
 case "$ARCH-$OS" in
-    "aarch64-darwin") FILENAME="vproxy-$version-aarch64-apple-darwin.tar.gz" ;;
-    "aarch64-linux") FILENAME="vproxy-$version-aarch64-unknown-linux-musl.tar.gz" ;;
-    "arm-linux") FILENAME="vproxy-$version-arm-unknown-linux-musleabihf.tar.gz" ;;
-    "armv7l-linux") FILENAME="vproxy-$version-armv7-unknown-linux-musleabihf.tar.gz" ;;
-    "i686-windows") FILENAME="vproxy-$version-i686-pc-windows-gnu.tar.gz" ;;
-    "i686-linux") FILENAME="vproxy-$version-i686-unknown-linux-musl.tar.gz" ;;
-    "x86_64-darwin") FILENAME="vproxy-$version-x86_64-apple-darwin.tar.gz" ;;
-    "x86_64-windows") FILENAME="vproxy-$version-x86_64-pc-windows-gnu.tar.gz" ;;
-    "x86_64-linux") FILENAME="vproxy-$version-x86_64-unknown-linux-musl.tar.gz" ;;
-    *) echo "Unknown system architecture: $ARCH-$OS"; exit 1 ;;
+    "aarch64-darwin")  FILENAME+="aarch64-apple-darwin" ;;
+    "aarch64-linux")   FILENAME+="aarch64-unknown-linux-musl" ;;
+    "arm-linux")       FILENAME+="arm-unknown-linux-musleabihf" ;;
+    "armv7l-linux")    FILENAME+="armv7-unknown-linux-musleabihf" ;;
+    "i686-windows")    FILENAME+="i686-pc-windows-gnu" ;;
+    "i686-linux")      FILENAME+="i686-unknown-linux-musl" ;;
+    "x86_64-darwin")   FILENAME+="x86_64-apple-darwin" ;;
+    "x86_64-windows")  FILENAME+="x86_64-pc-windows-gnu" ;;
+    "x86_64-linux")    FILENAME+="x86_64-unknown-linux-musl" ;;
+    *) handle_error "不支持的系统架构: $ARCH-$OS" ;;
 esac
+FILENAME+=".tar.gz"
 
-# Construct the download URL
+# 构建下载URL
 download_url="https://github.com/wx-11/vproxy/releases/download/$tag/$FILENAME"
+echo "下载地址: $download_url"
 
-echo "Download URL: $download_url"
+# 下载二进制包
+echo "正在下载 $FILENAME ..."
+curl -L -o "$FILENAME" "$download_url" || handle_error "下载失败"
+echo "下载完成"
 
-if [ -z "$download_url" ]; then
-    echo "Could not find a suitable package for your system architecture."
-    exit 1
-fi
+# 解压二进制包
+echo "正在解压文件..."
+tar -xzf "$FILENAME" || handle_error "解压失败"
+echo "解压完成"
 
-# Download the binary package
-curl -L -o $FILENAME $download_url
-
-echo "Download complete: $FILENAME"
-
-# Extract the binary package
-tar -xzf $FILENAME
-
-echo "Extraction complete: $FILENAME"
-
-# Ask the user if they want to automatically install the package
-read -p "Do you want to install the package to /bin/vproxy? (y/n): " install_choice
-
-if [ "$install_choice" = "y" ] || [ "$install_choice" = "Y" ]; then
-    # Move the extracted files to the installation path
-    # Assuming the binary file is named `vproxy`
-    sudo mv vproxy /bin/vproxy
-
-    echo "Installation complete: /bin/vproxy"
+# 询问用户是否要安装
+read -rp "是否将程序安装到 /bin/vproxy? (y/n): " install_choice
+if [[ "$install_choice" =~ ^[Yy]$ ]]; then
+    # 安装程序
+    if [ -f vproxy ]; then
+        sudo mv vproxy /bin/vproxy || handle_error "安装失败，请检查权限"
+        echo "安装完成: /bin/vproxy"
+        echo "现在可以使用 'vproxy' 命令了"
+    else
+        handle_error "找不到可执行文件"
+    fi
 else
-    echo "Installation skipped."
+    echo "已取消安装"
 fi
+
+# 清理临时文件
+rm -f "$FILENAME"
