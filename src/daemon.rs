@@ -60,7 +60,6 @@ pub fn start(args: BootArgs) -> crate::Result<()> {
         .or_else(|| User::from_uid(Uid::current()).ok().flatten());
 
     if let Some(real_user) = user_name {
-        println!("Running as user {}", real_user.name);
         daemonize = daemonize
             .user(real_user.name.as_str())
             .group(real_user.gid.as_raw());
