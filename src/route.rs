@@ -34,6 +34,8 @@ pub async fn sysctl_route_add_cidr(subnet: &cidr::IpCidr) {
 }
 
 async fn add_route(handle: Handle, cidr: &cidr::IpCidr) -> Result<(), Error> {
+    const LOCAL_TABLE_ID: u8 = 255;
+
     let route = handle.route();
     let iface_idx = handle
         .link()
@@ -54,8 +56,14 @@ async fn add_route(handle: Handle, cidr: &cidr::IpCidr) -> Result<(), Error> {
         let mut routes = handle.route().get(ip_version).execute();
         while let Some(route) = routes.try_next().await? {
             let header = route.header;
+            tracing::trace!(
+                "route attributes: {:?}\nroute header: {:?}",
+                route.attributes,
+                header
+            );
             if header.address_family == address_family
                 && header.destination_prefix_length == destination_prefix_length
+                && header.table == LOCAL_TABLE_ID
             {
                 for attr in route.attributes.iter() {
                     if let RouteAttribute::Destination(dest) = attr {
@@ -90,7 +98,7 @@ async fn add_route(handle: Handle, cidr: &cidr::IpCidr) -> Result<(), Error> {
                     .scope(RouteScope::Universe)
                     .output_interface(iface_idx)
                     .priority(1024)
-                    .table_id(255)
+                    .table_id(LOCAL_TABLE_ID.into())
                     .execute()
                     .await?;
                 tracing::info!("Added IPv4 route {}", cidr);
@@ -114,7 +122,7 @@ async fn add_route(handle: Handle, cidr: &cidr::IpCidr) -> Result<(), Error> {
                     .scope(RouteScope::Universe)
                     .output_interface(iface_idx)
                     .priority(1024)
-                    .table_id(255)
+                    .table_id(LOCAL_TABLE_ID.into())
                     .execute()
                     .await?;
                 tracing::info!("Added IPv6 route {}", cidr);
