@@ -19,13 +19,13 @@
 - wget
 
 ```bash
-wget -O /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh 
+wget -O /tmp/install_vproxy.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install_vproxy.sh && rm -rf /tmp/install_vproxy.sh
 ```
 
 - curl
 
 ```bash
-curl -s -o /tmp/install.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install.sh
+curl -s -o /tmp/install_vproxy.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install_vproxy.sh
 ```
 
 - Docker
