@@ -53,11 +53,9 @@ echo "解压完成"
 # 询问用户是否要安装
 read -rp "是否将程序安装到 /bin/vproxy? (y/n): " install_choice
 if [[ "$install_choice" =~ ^[Yy]$ ]]; then
-    # 安装程序
     if [ -f vproxy ]; then
         sudo mv vproxy /bin/vproxy || handle_error "安装失败，请检查权限"
-        echo "安装完成: /bin/vproxy"
-        echo "现在可以使用 'vproxy' 命令了"
+        echo "安装完成: /bin/vproxy 版本: ${vproxy -V}"
     else
         handle_error "找不到可执行文件"
     fi
@@ -65,5 +63,4 @@ else
     echo "已取消安装"
 fi
 
-# 清理临时文件
 rm -f "$FILENAME"
