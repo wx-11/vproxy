@@ -56,7 +56,7 @@ read -rp "是否将程序安装到 /bin/vproxy? (y/n): " install_choice
 if [[ "$install_choice" =~ ^[Yy]$ ]]; then
     if [ -f vproxy ]; then
         mv vproxy /bin/vproxy || handle_error "安装失败，请检查权限"
-        echo -e "安装完成: $(which vproxy)\n版本: $(vproxy --version)\n文档: https://github.com/wx-11/vproxy/blob/main/zh_cn.md"
+        echo -e "安装完成: /bin/vproxy\n版本: $(vproxy --version)\n文档: https://github.com/wx-11/vproxy/blob/main/zh_cn.md"
     else
         handle_error "找不到可执行文件"
     fi
