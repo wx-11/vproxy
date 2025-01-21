@@ -1,15 +1,14 @@
 #!/bin/bash
 
-# 设置工作目录
+echo
+echo "进入 vproxy 安装脚本"
 cd /tmp || exit
 
-# 定义错误处理函数
 handle_error() {
     echo "错误: $1"
     exit 1
 }
 
-echo "正在获取最新版本信息..."
 release_info=$(curl -s "https://api.github.com/repos/wx-11/vproxy/releases/latest") || handle_error "无法获取版本信息"
 tag=$(echo "$release_info" | grep -oP '"tag_name": "\K(.*?)(?=")') || handle_error "无法解析版本标签"
 version=${tag#v}
@@ -34,7 +33,7 @@ FILENAME+=".tar.gz"
 
 download_url="https://github.com/wx-11/vproxy/releases/download/$tag/$FILENAME"
 
-echo "正在下载 $ARCH-$OS 系统安装包 $FILENAME ... $download_url"
+echo -e "正在下载 $ARCH-$OS 系统安装包 $FILENAME ... \n$download_url"
 curl -L -o "$FILENAME" "$download_url" || handle_error "下载失败"
 tar -xzf "$FILENAME" || handle_error "解压失败"
 
