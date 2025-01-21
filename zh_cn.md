@@ -19,7 +19,7 @@
 - wget
 
 ```bash
-wget -O /tmp/install_vproxy.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install_vproxy.sh && rm -rf /tmp/install_vproxy.sh
+wget -O /tmp/install_vproxy.sh https://raw.githubusercontent.com/wx-11/vproxy/main/.github/install.sh && echo y | bash /tmp/install_vproxy.sh
 ```
 
 - curl
@@ -88,10 +88,11 @@ $ vproxy run -h
   -r, --cidr-range <CIDR_RANGE>
           IP-CIDR-Range，例如 64
   -f, --fallback <FALLBACK>
-          回退地址 作用参考( https://github.com/0x676e67/vproxy/issues/41#issuecomment-2111324521 )
+          回退地址 
   -h, --help
           打印帮助信息
 ```
+fallback 作用参考 https://github.com/0x676e67/vproxy/issues/41#issuecomment-2111324521
 
 ### 注意事项
 
