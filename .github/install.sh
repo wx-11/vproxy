@@ -47,12 +47,12 @@ FILENAME+=".tar.gz"
 
 download_url="https://github.com/wx-11/vproxy/releases/download/$tag/$FILENAME"
 
-echo -e "正在下载 $ARCH-$OS 系统安装包 $FILENAME ... \n$download_url"
+echo -e "即将下载 $ARCH-$OS 系统安装包 $FILENAME ... \n$download_url"
 curl -L -o "$FILENAME" "$download_url" || handle_error "下载失败"
 tar -xzf "$FILENAME" || handle_error "解压失败"
 echo
 
-read -rp "是否将程序安装到 /bin/vproxy? (y/n): " install_choice
+read -rp "是否将程序安装到 /bin/vproxy (全局变量方便引用) (y/n): " install_choice
 if [[ "$install_choice" =~ ^[Yy]$ ]]; then
     if [ -f vproxy ]; then
         mv vproxy /bin/vproxy || handle_error "安装失败，请检查权限"
@@ -61,7 +61,12 @@ if [[ "$install_choice" =~ ^[Yy]$ ]]; then
         handle_error "找不到可执行文件"
     fi
 else
-    echo "已取消安装"
+    if [ -f vproxy ]; then
+        mv vproxy /root/vproxy || handle_error "安装失败，请检查权限"
+        echo -e "安装完成: 后续需要带路径引用 /root/vproxy\n版本: $(vproxy --version)\n文档: https://github.com/wx-11/vproxy/blob/main/zh_cn.md"
+    else
+        handle_error "找不到可执行文件"
+    fi
 fi
 
 echo
