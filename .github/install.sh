@@ -9,18 +9,14 @@ handle_error() {
     exit 1
 }
 
-# 获取最新版本信息
 echo "正在获取最新版本信息..."
 release_info=$(curl -s "https://api.github.com/repos/wx-11/vproxy/releases/latest") || handle_error "无法获取版本信息"
 tag=$(echo "$release_info" | grep -oP '"tag_name": "\K(.*?)(?=")') || handle_error "无法解析版本标签"
 version=${tag#v}
 
-# 获取系统架构和操作系统信息
 ARCH=$(uname -m)
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-echo "检测到系统: $ARCH-$OS"
 
-# 根据系统架构和操作系统选择合适的文件名
 FILENAME="vproxy-$version-"
 case "$ARCH-$OS" in
     "aarch64-darwin")  FILENAME+="aarch64-apple-darwin" ;;
@@ -36,26 +32,18 @@ case "$ARCH-$OS" in
 esac
 FILENAME+=".tar.gz"
 
-# 构建下载URL
 download_url="https://github.com/wx-11/vproxy/releases/download/$tag/$FILENAME"
-echo "下载地址: $download_url"
 
-# 下载二进制包
-echo "正在下载 $FILENAME ..."
+echo "正在下载 $ARCH-$OS 系统安装包 $FILENAME ... $download_url"
 curl -L -o "$FILENAME" "$download_url" || handle_error "下载失败"
-echo "下载完成"
-
-# 解压二进制包
-echo "正在解压文件..."
 tar -xzf "$FILENAME" || handle_error "解压失败"
-echo "解压完成"
 
 # 询问用户是否要安装
 read -rp "是否将程序安装到 /bin/vproxy? (y/n): " install_choice
 if [[ "$install_choice" =~ ^[Yy]$ ]]; then
     if [ -f vproxy ]; then
         sudo mv vproxy /bin/vproxy || handle_error "安装失败，请检查权限"
-        echo "安装完成: /bin/vproxy 版本: ${vproxy -V}"
+        echo "安装完成: /bin/vproxy 版本: $(vproxy --version)"
     else
         handle_error "找不到可执行文件"
     fi
