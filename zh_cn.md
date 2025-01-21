@@ -205,7 +205,7 @@ $ for i in `seq 1 3`; do curl -x "socks5h://test-ttl-2:test@127.0.0.1:8101" -L v
 2001:470:70c6:41d0:14fd:d025:835a:d105
 ```
 
-### https://github.com/0x676e67/vproxy/issues/41#issuecomment-2111318008 关于 `socks5h` 和 `socks5` 的 DNS 解析行为： 引用claude回复
+### [关于 `socks5h` 和 `socks5` 的 DNS 解析行为](https://github.com/0x676e67/vproxy/issues/41#issuecomment-2111318008)： 引用claude回复
  
 > 1. `socks5://` (没有h)：
 > * DNS 解析发生在本地客户端
