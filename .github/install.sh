@@ -1,7 +1,16 @@
 #!/bin/bash
 
 echo
-echo "进入 vproxy 安装脚本"
+
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+BOLD='\033[1m'
+
+echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║           进入 vproxy 安装脚本             ║${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
+
+echo ""
 cd /tmp || exit
 
 handle_error() {
