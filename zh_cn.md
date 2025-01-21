@@ -96,7 +96,7 @@ fallback 作用参考 https://github.com/0x676e67/vproxy/issues/41#issuecomment-
 
 ### 注意事项
 
-如果您使用 完全的root权限运行程序，它会自动为您配置 `sysctl net.ipv6.ip_nonlocal_bind=1` 和 `ip route add local 2001:470:e953::/48 dev lo`。如果权限不够，您需要手动配置这些选项。 参考( https://github.com/0x676e67/vproxy/issues/118#issuecomment-2600935945)
+如果您使用[完全的root权限运行程序](https://github.com/0x676e67/vproxy/issues/118#issuecomment-2600935945)，它会自动为您配置 `sysctl net.ipv6.ip_nonlocal_bind=1` 和 `ip route add local 2001:470:e953::/48 dev lo`。如果权限不够，您需要手动配置这些选项。
 
 如果未配置子网，将使用本地默认网络代理请求。当本地机器设置优先 `IPv4`/`IPv6` 且优先级为 `IPv4` 时，它将始终使用 `IPv4` 发出请求（如果有的话）。
 
