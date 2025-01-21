@@ -2,8 +2,13 @@
 
 echo
 
+handle_error() {
+    echo "错误: $1" >&2
+    exit 1
+}
+
 if [ "$(id -u)" -ne 0 ]; then
-  echo "错误: 请使用 root 权限运行此脚本" >&2
+  handle_error "错误: 请使用 root 权限运行此脚本"
   exit 1
 fi
 
@@ -17,11 +22,6 @@ echo -e "${BLUE}╚════════════════════�
 
 echo 
 cd /tmp || exit
-
-handle_error() {
-    echo "错误: $1"
-    exit 1
-}
 
 release_info=$(curl -s "https://api.github.com/repos/wx-11/vproxy/releases/latest") || handle_error "无法获取版本信息"
 tag=$(echo "$release_info" | grep -oP '"tag_name": "\K(.*?)(?=")') || handle_error "无法解析版本标签"
@@ -52,7 +52,7 @@ curl -L -o "$FILENAME" "$download_url" || handle_error "下载失败"
 tar -xzf "$FILENAME" || handle_error "解压失败"
 echo
 
-read -rp "是否将程序安装到 /bin/vproxy (全局变量方便引用) (y/n): " install_choice
+read -rp "是否将程序安装到 /bin/vproxy ? (全局变量使用 y/n): " install_choice
 if [[ "$install_choice" =~ ^[Yy]$ ]]; then
     if [ -f vproxy ]; then
         mv vproxy /bin/vproxy || handle_error "安装失败，请检查权限"
@@ -63,7 +63,7 @@ if [[ "$install_choice" =~ ^[Yy]$ ]]; then
 else
     if [ -f vproxy ]; then
         mv vproxy /root/vproxy || handle_error "安装失败，请检查权限"
-        echo -e "安装完成: 后续需要带路径引用 /root/vproxy\n版本: $(vproxy --version)\n文档: https://github.com/wx-11/vproxy/blob/main/zh_cn.md"
+        echo -e "安装完成: 需要带路径使用 /root/vproxy\n版本: $(vproxy --version)\n文档: https://github.com/wx-11/vproxy/blob/main/zh_cn.md"
     else
         handle_error "找不到可执行文件"
     fi
