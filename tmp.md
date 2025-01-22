@@ -1,151 +1,71 @@
-# vproxy 使用文档：扩展功能和 CIDR Range 优化
-
-本文档详细描述了 `vproxy` 的扩展功能，特别是 `Range` 扩展的高级用法和优化改动。
+在 `vproxy` 的扩展机制中，**ID 和 IP 的关系**是通过特定的哈希计算与范围限制来建立的。以下是详细的关系和生成过程：
 
 ---
 
-## 功能概览
+## **ID 和 IP 的关系建立过程**
 
-`vproxy` 提供了多个扩展功能，以灵活控制客户端 IP 的分配和使用：
-
-- **TTL 扩展**：基于请求次数控制 IP 变更。
-- **Session 扩展**：基于固定会话 ID 分配相同的 IP。
-- **Range 扩展**：在固定的 CIDR 范围内生成 IP。
-
----
-
-## Range 扩展功能优化
-
-`Range` 扩展允许通过特定范围和 ID 在动态地址分配中保持一致性，同时增强了 IP 地址的随机化生成逻辑。
-
-### **优化代码逻辑**
-在 `assign_ipv4_with_range` 和 `assign_ipv6_with_range` 中对 CIDR Range 参数进行了改进：
-- 引入了 `combined` 值，允许根据 `Range` ID 的哈希值影响地址分配。
-- 保留了 CIDR 的网络部分，随机化主机部分，确保分配的地址在指定范围内。
-- 增加了对范围长度的验证，避免超出基础 CIDR 定义的限制。
-
-### **关键代码片段**
-#### IPv4 地址分配优化
-```rust
-fn assign_ipv4_with_range(cidr: &Ipv4Cidr, range: u8, combined: u32) -> Ipv4Addr {
-    let base_ip: u32 = u32::from(cidr.first_address());
-    let prefix_len = cidr.network_length();
-
-    if range < prefix_len {
-        return assign_rand_ipv4(cidr);
-    }
-
-    let combined_shifted = (combined & ((1u32 << (range - prefix_len)) - 1)) << (32 - range);
-    let subnet_mask = !((1u32 << (32 - prefix_len)) - 1);
-    let subnet_with_fixed = (base_ip & subnet_mask) | combined_shifted;
-
-    let host_mask = (1u32 << (32 - range)) - 1;
-    let host_part: u32 = random::<u32>() & host_mask;
-
-    Ipv4Addr::from(subnet_with_fixed | host_part)
-}
-```
-
-#### IPv6 地址分配优化
-```rust
-fn assign_ipv6_with_range(cidr: &Ipv6Cidr, range: u8, combined: u128) -> Ipv6Addr {
-    let base_ip: u128 = cidr.first_address().into();
-    let prefix_len = cidr.network_length();
-
-    if range < prefix_len {
-        return assign_rand_ipv6(cidr);
-    }
-
-    let combined_shifted = (combined & ((1u128 << (range - prefix_len)) - 1)) << (128 - range);
-    let subnet_mask = !((1u128 << (128 - prefix_len)) - 1);
-    let subnet_with_fixed = (base_ip & subnet_mask) | combined_shifted;
-
-    let host_mask = (1u128 << (128 - range)) - 1;
-    let host_part: u128 = (random::<u64>() as u128) & host_mask;
-
-    Ipv6Addr::from(subnet_with_fixed | host_part)
-}
-```
+### 1. **ID 的作用**
+- **ID** 是 `Session` 或 `Range` 扩展的一部分，用于生成固定的或范围内的 IP 地址。
+- ID 值可以是任意字符串（如 `123456`），通常用作会话标识或用户标识。
+- ID 的作用是确保在相同的会话或范围配置中，生成的 IP 地址保持一致。
 
 ---
 
-## **高级用法**
+### 2. **生成过程**
+ID 是通过哈希函数转换为一个数值（如 `u128`），然后用于影响 IP 地址的生成。在 `vproxy` 中，这个过程如下：
 
-### **TTL 扩展**
-- 用户名附加格式：`username-ttl-<固定值>`。
-- 每次请求后减少 TTL，达到 0 时更换 IP。
-- 示例：
-  ```bash
-  curl -x "http://test-ttl-2:test@127.0.0.1:8101" https://ifconfig.co
-  ```
+#### （1）**计算哈希值**
+- 使用 `murmurhash3_x64_128` 或其他哈希函数，将 ID 转换为一个固定的数值。
+- 例如，`username-range-123456` 被转换为两个 64 位整数 `(a, b)`，组合成一个 128 位的数值。
 
-### **Session 扩展**
-- 用户名附加格式：`username-session-<固定ID>`。
-- Session ID 保持不变时，IP 保持一致。
-- 示例：
-  ```bash
-  curl -x "http://test-session-123456:test@127.0.0.1:8101" https://ifconfig.co
-  ```
+#### （2）**结合基础 CIDR 和 Range**
+- 基础 CIDR（如 `2001:db8::/32`）提供了网络部分的定义。
+- `Range` 参数决定了网络部分和主机部分的分界线。例如：
+  - 基础 CIDR 是 `/32`，`Range` 是 `64`，表示生成的地址会在 `/64` 范围内。
+  - 主机部分的生成则受到哈希值 `(a, b)` 的影响。
 
-### **Range 扩展**
-- 用户名附加格式：`username-range-<固定ID>`。
-- 配合 `--cidr-range` 参数使用，ID 控制范围内地址生成。
-- 示例：
-  ```bash
-  vproxy run --bind 127.0.0.1:8101 -i 2001:470:70c6::/48 --cidr-range 64 http -u test -p test
-
-  curl -x "http://test-range-987654:test@127.0.0.1:8101" https://ifconfig.co
-  ```
+#### （3）**生成 IP**
+生成 IP 的过程会：
+1. 保留 CIDR 的固定网络部分。
+2. 使用哈希值 `(a, b)` 和随机值生成主机部分。
+3. 合并网络部分和主机部分，生成完整的 IP 地址。
 
 ---
 
-## 示例用法
-
-### 带用户名和密码的 Http 代理会话
-
-- 启动 `vproxy` 服务：
-  ```bash
-  vproxy run --bind 127.0.0.1:8101 -i 2001:470:70c6::/48 http -u test -p test
-  ```
-
-- 使用相同 Session ID：
-  ```bash
-  for i in `seq 1 10`; do
-    curl -x "http://test-session-123456789:test@127.0.0.1:8101" -L https://ifconfig.co
-  done
-  ```
-  输出示例：
-  ```
-  2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
-  2001:470:70c6:93ee:9b7c:b4f9:4913:22f5
-  ```
-
-- 使用不同 Session ID：
-  ```bash
-  for i in `seq 1 10`; do
-    curl -x "http://test-session-987654321:test@127.0.0.1:8101" -L https://ifconfig.co
-  done
-  ```
-  输出示例：
-  ```
-  2001:470:70c6:41d0:14fd:d025:835a:d102
-  2001:470:70c6:41d0:14fd:d025:835a:d102
-  ```
+### 3. **ID 和 IP 的映射关系**
+- **相同的 ID** 和相同的 Range 配置会生成相同的 IP 地址。
+  - 例如：`username-range-123456` 和 `username-range-123456` 会生成同一个 IP 地址。
+- **不同的 ID** 或不同的 Range 配置会生成不同的 IP 地址。
+  - 例如：`username-range-123456` 和 `username-range-654321` 会生成不同的 IP 地址。
 
 ---
 
-## 注意事项
+### 4. **示例**
+假设基础 CIDR 是 `2001:db8::/32`，Range 是 `64`：
+- **ID: `123456`**
+  - 哈希值 `(a, b)` 被转换为一个数值 `combined`。
+  - IP 地址可能是：`2001:db8:abcd::1`.
 
-1. **CIDR 范围设置**：
-   - `--cidr-range` 的值应大于或等于基础 CIDR 的前缀长度。例如：
-     - 基础 CIDR 为 `/48`，则 `--cidr-range` 的值需为 48 到 128 之间。
+- **ID: `654321`**
+  - 哈希值 `(a', b')` 不同，生成的地址可能是：`2001:db8:abcd::2`.
 
-2. **扩展值使用**：
-   - 确保 `Range` 或 `Session` 的 ID 值唯一且固定，以获得一致的 IP 地址。
-
-3. **随机性与固定性平衡**：
-   - 在需要动态地址时，可以不附加扩展值，让代理随机分配地址。
+如果没有扩展（如 `Range` 或 `Session`），则生成的 IP 地址是完全随机的。
 
 ---
 
-此优化提升了 Range 扩展的灵活性，增强了地址生成的一致性和安全性，同时保持了代理服务的高性能和可扩展性。
+### 5. **ID 和 IP 的映射特点**
+1. **唯一性**：
+   - ID 和扩展值相同，生成的 IP 地址始终相同。
+2. **范围限制**：
+   - 生成的 IP 地址会被限制在指定的 CIDR 和 Range 范围内。
+3. **随机性**：
+   - 如果 ID 不固定或未传入扩展值，则会随机生成 IP 地址。
+
+---
+
+### **总结**
+- **ID 是生成 IP 地址的关键输入**，通过哈希映射到主机部分。
+- **基础 CIDR 和 Range 决定地址范围**，ID 决定具体的地址。
+- **关系**：`IP = f(CIDR, Range, ID)`，其中 `f` 是分配函数。
+
+这种机制确保了灵活性和可控性，同时提供了稳定的 IP 分配方案。
