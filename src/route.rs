@@ -217,10 +217,6 @@ fn execute_sysctl(command: &str, value: &str) -> Result<(), SysctlError> {
     );
 
     ctl.set_value_string(value).map(|_| {
-        tracing::info!(
-            "Updated sysctl parameter '{}' to value: {}",
-            command,
-            value
-        );
+        tracing::info!("Updated sysctl parameter '{}' to value: {}", command, value);
     })
 }
