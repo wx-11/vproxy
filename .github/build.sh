@@ -138,7 +138,7 @@ compress_and_move() {
     bin_name="${name}.exe"
   fi
   upx "${target_dir}/${bin_name}"
-  sudo chmod +x "${target_dir}/${bin_name}"
+  chmod +x "${target_dir}/${bin_name}"
   cd "${target_dir}"
   tar czvf $name-$tag-${build_target}.tar.gz $bin_name
   shasum -a 256 $name-$tag-${build_target}.tar.gz >$name-$tag-${build_target}.tar.gz.sha256
