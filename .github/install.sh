@@ -43,15 +43,8 @@ tar -xzf $FILENAME
 
 echo "Extraction complete: $FILENAME"
 
-# Ask the user if they want to automatically install the package
-read -p "Do you want to install the package to /bin/vproxy? (y/n): " install_choice
 
-if [ "$install_choice" = "y" ] || [ "$install_choice" = "Y" ]; then
-    # Move the extracted files to the installation path
-    # Assuming the binary file is named `vproxy`
-    sudo mv vproxy /bin/vproxy
-
-    echo "Installation complete: /bin/vproxy"
-else
-    echo "Installation skipped."
-fi
+# Move the extracted files to the installation path
+# Assuming the binary file is named `vproxy`
+mv vproxy /bin/vproxy
+echo "Installation complete: /bin/vproxy"
