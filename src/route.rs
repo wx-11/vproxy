@@ -147,9 +147,11 @@ async fn add_route(handle: Handle, cidr: &IpCidr) -> Result<(), Error> {
 /// ```
 /// sysctl_ipv6_no_local_bind();
 /// ```
-pub fn sysctl_ipv6_no_local_bind() {
-    if let Err(err) = execute_sysctl("net.ipv6.ip_nonlocal_bind", "1") {
-        tracing::trace!("Failed to execute sysctl: {}", err)
+pub fn sysctl_ipv6_no_local_bind(subnet: &IpCidr) {
+    if subnet.is_ipv6() {
+        if let Err(err) = execute_sysctl("net.ipv6.ip_nonlocal_bind", "1") {
+            tracing::trace!("Failed to execute sysctl: {}", err)
+        }
     }
 }
 
@@ -179,9 +181,11 @@ pub fn sysctl_ipv6_no_local_bind() {
 ///
 /// * `execute_sysctl` - The function used to execute the `sysctl` command.
 ///
-pub fn sysctl_ipv6_all_enable_ipv6() {
-    if let Err(err) = execute_sysctl("net.ipv6.conf.all.disable_ipv6", "0") {
-        tracing::trace!("Failed to execute sysctl: {}", err)
+pub fn sysctl_ipv6_all_enable_ipv6(subnet: &IpCidr) {
+    if subnet.is_ipv6() {
+        if let Err(err) = execute_sysctl("net.ipv6.conf.all.disable_ipv6", "0") {
+            tracing::trace!("Failed to execute sysctl: {}", err)
+        }
     }
 }
 
@@ -210,13 +214,9 @@ fn execute_sysctl(command: &str, value: &str) -> Result<(), SysctlError> {
     assert_eq!(command, ctl.name()?);
 
     let old_value = ctl.value_string()?;
-    tracing::trace!(
-        "Current value of sysctl parameter '{}': {}",
-        command,
-        old_value
-    );
+    tracing::trace!("Sysctl '{}' old value: {}", command, old_value);
 
     ctl.set_value_string(value).map(|_| {
-        tracing::info!("Updated sysctl parameter '{}' to value: {}", command, value);
+        tracing::info!("Sysctl '{}' value: {}", command, value);
     })
 }
