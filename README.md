@@ -106,13 +106,16 @@ docker run --rm -it ghcr.io/0x676e67/vproxy:latest run http
 
 ### Note
 
-You run the program with sudo, it will automatically configure `sysctl net.ipv6.ip_nonlocal_bind=1` and `ip route add local 2001:470:e953::/48` dev lo for you. If you do not run it with sudo, you will need to configure these manually.
+If you run the program as root, it will automatically configure the sysctl `net.ipv6.ip_nonlocal_bind=1`, `net.ipv6.conf.all.disable_ipv6`, and `ip route add local 2001:470:e953::/48 dev lo` for you. Otherwise you will need to configure these settings manually.
 
 If no subnet is configured, the local default network proxy request will be used. When the local machine sets the priority `Ipv4`/`Ipv6` and the priority is `Ipv4`, it will always use `Ipv4` to make requests (if any).
 
 ```shell
 # Enable binding to non-local IPv6 addresses
 sudo sysctl net.ipv6.ip_nonlocal_bind=1
+
+# Enable IPv6
+sudo sysctl net.ipv6.conf.all.disable_ipv6=0
 
 # Replace with your IPv6 subnet
 sudo ip route add local 2001:470:e953::/48 dev lo
