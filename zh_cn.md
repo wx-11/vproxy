@@ -25,7 +25,7 @@ wget -O /tmp/install_vproxy.sh https://raw.githubusercontent.com/wx-11/vproxy/re
 - curl
 
 ```bash
-curl -s -o -L /tmp/install_vproxy.sh https://raw.githubusercontent.com/wx-11/vproxy/refs/heads/cantsync/.github/install.sh && echo y | bash /tmp/install_vproxy.sh
+curl -s -o /tmp/install_vproxy.sh https://raw.githubusercontent.com/wx-11/vproxy/refs/heads/cantsync/.github/install.sh && echo y | bash /tmp/install_vproxy.sh
 ```
 
 - Docker
@@ -151,7 +151,7 @@ while true; do curl -x http://127.0.0.1:8100 -s https://ifconfig.co -A Mozilla; 
 
 - Range 扩展
 
-在用户名后附加 `-range-id`，其中 range 是固定值，ID 是任意随机值（例如 `username-range-123456`）。通过保持 Range ID 不变，您可以在固定范围内使用固定 CIDR 范围。此外，您必须设置启动参数 `--cidr-range`，且长度在有效范围内。
+在用户名后附加 `-range-id`，其中 range 是固定值，ID 是任意随机值（例如 `username-range-123456`）。通过保持 Range ID 不变，您可以使用固定 CIDR 范围内随机 IP。此外，您必须设置启动参数 `--cidr-range`，且长度在有效范围内。
 
 
 
