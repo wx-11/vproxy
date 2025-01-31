@@ -79,9 +79,13 @@ pub fn run(args: BootArgs) -> Result<()> {
     tracing::info!("Concurrent: {}", args.concurrent);
     tracing::info!("Connect timeout: {:?}s", args.connect_timeout);
 
+    let cpu_cores = num_cpus::get();
+    let blocking_threads = (cpu_cores as f64 * 1.5).round() as usize;
+
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
-        .max_blocking_threads(args.concurrent)
+        .worker_threads(cpu_cores)
+        .max_blocking_threads(blocking_threads)
         .build()?
         .block_on(async {
             #[cfg(target_os = "linux")]
