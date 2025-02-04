@@ -1,7 +1,9 @@
 name: Upstream Sync
 
 on:
-  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "50 15 * * *"
   
 permissions:
   contents: write
